@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--beforeRadius原图外圆半径
+    beforeInRadius原图內圆半径
+    radius画出来的圆的半径
+    left_Background左边按下替换的图片
+    top_Background顶部按下替换的图片
+    right_Background右边按下替换的图片
+    bottom_Background底边按下替换的图片
+    -->
+    <declare-styleable name="DirectionKey">
+        <attr name="beforeRadius" format="float"></attr>
+        <attr name="beforeInRadius" format="float"></attr>
+        <attr name="radius" format="float"></attr>
+        <attr name="left_Background" format="color|reference"></attr>
+        <attr name="top_Background" format="color|reference"></attr>
+        <attr name="right_Background" format="color|reference"></attr>
+        <attr name="bottom_Background" format="color|reference"></attr>
+    </declare-styleable>
+</resources>
