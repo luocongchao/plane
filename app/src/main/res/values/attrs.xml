@@ -17,4 +17,11 @@
         <attr name="right_Background" format="color|reference"></attr>
         <attr name="bottom_Background" format="color|reference"></attr>
     </declare-styleable>
+
+    <declare-styleable name="Fout">
+        <attr name="beforeRadius1" format="float"></attr>
+        <attr name="beforeInRadius1" format="float"></attr>
+        <attr name="radius1" format="float"></attr>
+    </declare-styleable>
+
 </resources>

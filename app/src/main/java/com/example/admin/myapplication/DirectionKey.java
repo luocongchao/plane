@@ -3,7 +3,9 @@ package com.example.admin.myapplication;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -15,6 +17,9 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+
 public class DirectionKey extends View {
 
 
@@ -23,6 +28,7 @@ public class DirectionKey extends View {
 
     private OnShakeListener mOnShakeListener;
 
+    private Direction prevDirection = Direction.DIRECTION_CENTER;
     private Direction tempDirection = Direction.DIRECTION_CENTER;
 
 
@@ -69,8 +75,73 @@ public class DirectionKey extends View {
         mRockerPaint.setAntiAlias(true);
     }
 
+    private class DEFBitmapClass {
+        private float realHeight;
+        private float realWidth;
+        private Bitmap bitmap;
 
-    private Bitmap getBitmap(Direction direction) {
+        public float getRealHeight() {
+            return realHeight;
+        }
+
+        public void setRealHeight(float realHeight) {
+            this.realHeight = realHeight;
+        }
+
+        public float getRealWidth() {
+            return realWidth;
+        }
+
+        public void setRealWidth(float realWidth) {
+            this.realWidth = realWidth;
+        }
+
+        public Bitmap getBitmap() {
+            return bitmap;
+        }
+
+        public void setBitmap(Bitmap bitmap) {
+            this.bitmap = bitmap;
+        }
+    }
+
+    private DEFBitmapClass left;
+    private DEFBitmapClass up;
+    private DEFBitmapClass right;
+    private DEFBitmapClass down;
+
+
+    /**
+     * 质量压缩图片，图片占用内存减小，像素数不变，常用于上传
+     *
+     * @param image
+     * @param size    期望图片的大小，单位为kb
+     * @param options 图片压缩的质量，取值1-100，越小表示压缩的越厉害,如输入30，表示压缩70%
+     * @return
+     */
+    private static Bitmap compressImage(Bitmap image, int size, int options) {
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        // 质量压缩方法，这里100表示不压缩，把压缩后的数据存放到baos中
+        image.compress(Bitmap.CompressFormat.PNG, 100, baos);
+        // 循环判断如果压缩后图片是否大于100kb,大于继续压缩
+        while (baos.toByteArray().length / 1024 > size) {
+            options -= 10;// 每次都减少10
+            baos.reset();// 重置baos即清空baos
+            // 这里压缩options%，把压缩后的数据存放到baos中
+            image.compress(Bitmap.CompressFormat.PNG, options, baos);
+        }
+        // 把压缩后的数据baos存放到ByteArrayInputStream中
+        ByteArrayInputStream isBm = new ByteArrayInputStream(baos.toByteArray());
+        // 把ByteArrayInputStream数据生成图片
+        Bitmap bitmap = BitmapFactory.decodeStream(isBm, null, null);
+        return bitmap;
+    }
+
+
+    private DEFBitmapClass getBitmap(Direction direction) {
+
+
         Drawable drawable = null;
         switch (direction) {
             case DIRECTION_UP:
@@ -92,7 +163,18 @@ public class DirectionKey extends View {
         if (null != drawable) {
             if (drawable instanceof BitmapDrawable) {
                 // 获取图片数据
-                return  ((BitmapDrawable) drawable).getBitmap();
+                Bitmap kk = ((BitmapDrawable) drawable).getBitmap();
+                DEFBitmapClass defBitmapClass = new DEFBitmapClass();
+                defBitmapClass.setRealWidth(kk.getWidth());
+                defBitmapClass.setRealHeight(kk.getHeight());
+                Matrix matrix = new Matrix();
+                matrix.postScale(0.2f, 0.2f);
+                Bitmap bitmap = Bitmap.createBitmap(kk, 0, 0, kk.getWidth(), kk.getHeight(), matrix, true);
+                defBitmapClass.setBitmap(bitmap);
+                //bitmap.recycle();
+                kk.recycle();
+                System.gc();
+                return defBitmapClass;
             }
         }
         return null;
@@ -101,42 +183,47 @@ public class DirectionKey extends View {
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
+        Log.d("", "调用draw方法");
         int measuredWidth = getMeasuredWidth();
         int measuredHeight = getMeasuredHeight();
         mCenterPoint = new Point(measuredWidth / 2, measuredHeight / 2);
 
         if (tempDirection == Direction.DIRECTION_LEFT || tempDirection == Direction.DIRECTION_DOWN_LEFT || tempDirection == Direction.DIRECTION_UP_LEFT) {
-            Bitmap bitmap=getBitmap(Direction.DIRECTION_LEFT);
-            float realH = proportion * bitmap.getHeight() / 2;
-            float realW = proportion * bitmap.getWidth() / 2;
-            Rect src = new Rect(0, 0, (int) bitmap.getWidth(), (int) bitmap.getHeight());
+            if (left == null) left = getBitmap(Direction.DIRECTION_LEFT);
+            float realH = left.getRealHeight() * proportion / 2;
+            float realW = left.getRealWidth() * proportion / 2;
+            Log.d("width", realW * 2 + "");
+            Log.d("height", realH * 2 + "");
+            Rect src = new Rect(0, 0, (int) left.getBitmap().getWidth(), (int) left.getBitmap().getHeight());
             RectF dst = new RectF(0, mCenterPoint.y - realH, realW * 2, mCenterPoint.y + realH);
-            canvas.drawBitmap(bitmap, src, dst, mRockerPaint);
+            canvas.drawBitmap(left.getBitmap(), src, dst, mRockerPaint);
         }
-        if (tempDirection == Direction.DIRECTION_UP ||tempDirection == Direction.DIRECTION_UP_LEFT||tempDirection == Direction.DIRECTION_UP_RIGHT) {
-            Bitmap bitmap=getBitmap(Direction.DIRECTION_UP);
-            float realH = proportion * bitmap.getHeight() / 2;
-            float realW = proportion * bitmap.getWidth() / 2;
-            Rect src = new Rect(0, 0, (int) bitmap.getWidth(), (int) bitmap.getHeight());
-            RectF dst = new RectF(mCenterPoint.x-realW, 0, mCenterPoint.x+realW, realH*2);
-            canvas.drawBitmap(bitmap, src, dst, mRockerPaint);
+        if (tempDirection == Direction.DIRECTION_UP || tempDirection == Direction.DIRECTION_UP_LEFT || tempDirection == Direction.DIRECTION_UP_RIGHT) {
+            if (up == null) up = getBitmap(Direction.DIRECTION_UP);
+            float realH = proportion * up.getRealHeight() / 2;
+            float realW = proportion * up.getRealWidth() / 2;
+            Rect src = new Rect(0, 0, (int) up.getBitmap().getWidth(), (int) up.getBitmap().getHeight());
+            RectF dst = new RectF(mCenterPoint.x - realW, 0, mCenterPoint.x + realW, realH * 2);
+            canvas.drawBitmap(up.getBitmap(), src, dst, mRockerPaint);
         }
-        if (tempDirection == Direction.DIRECTION_RIGHT||tempDirection == Direction.DIRECTION_UP_RIGHT||tempDirection == Direction.DIRECTION_DOWN_RIGHT) {
-            Bitmap bitmap=getBitmap(Direction.DIRECTION_RIGHT);
-            float realH = proportion * bitmap.getHeight() / 2;
-            float realW = proportion * bitmap.getWidth() / 2;
-            Rect src = new Rect(0, 0, (int) bitmap.getWidth(), (int) bitmap.getHeight());
-           RectF dst = new RectF(mCenterPoint.x*2-(realW*2), mCenterPoint.y -realH, mCenterPoint.x*2, mCenterPoint.y + realH);
-            canvas.drawBitmap(bitmap, src, dst, mRockerPaint);
+        if (tempDirection == Direction.DIRECTION_RIGHT || tempDirection == Direction.DIRECTION_UP_RIGHT || tempDirection == Direction.DIRECTION_DOWN_RIGHT) {
+            if (right == null) right = getBitmap(Direction.DIRECTION_RIGHT);
+            float realH = proportion * right.getRealHeight() / 2;
+            float realW = proportion * right.getRealWidth() / 2;
+            Rect src = new Rect(0, 0, (int) right.getBitmap().getWidth(), (int) right.getBitmap().getHeight());
+            RectF dst = new RectF(mCenterPoint.x * 2 - (realW * 2), mCenterPoint.y - realH, mCenterPoint.x * 2, mCenterPoint.y + realH);
+            canvas.drawBitmap(right.getBitmap(), src, dst, mRockerPaint);
         }
-        if (tempDirection == Direction.DIRECTION_DOWN||tempDirection == Direction.DIRECTION_DOWN_RIGHT||tempDirection == Direction.DIRECTION_DOWN_LEFT) {
-            Bitmap bitmap=getBitmap(Direction.DIRECTION_DOWN);
-            float realH = proportion * bitmap.getHeight() / 2;
-            float realW = proportion * bitmap.getWidth() / 2;
-            Rect src = new Rect(0, 0, (int) bitmap.getWidth(), (int) bitmap.getHeight());
-            RectF dst = new RectF(mCenterPoint.x-realW, mCenterPoint.y*2-(realH*2), mCenterPoint.x+realW,mCenterPoint.y*2 );
-            canvas.drawBitmap(bitmap, src, dst, mRockerPaint);
+        if (tempDirection == Direction.DIRECTION_DOWN || tempDirection == Direction.DIRECTION_DOWN_RIGHT || tempDirection == Direction.DIRECTION_DOWN_LEFT) {
+            if (down == null) down = getBitmap(Direction.DIRECTION_DOWN);
+            float realH = proportion * down.getRealHeight() / 2;
+            float realW = proportion * down.getRealWidth() / 2;
+            Rect src = new Rect(0, 0, (int) down.getBitmap().getWidth(), (int) down.getBitmap().getHeight());
+            RectF dst = new RectF(mCenterPoint.x - realW, mCenterPoint.y * 2 - (realH * 2), mCenterPoint.x + realW, mCenterPoint.y * 2);
+            canvas.drawBitmap(down.getBitmap(), src, dst, mRockerPaint);
         }
+
+
     }
 
     /**
@@ -256,7 +343,7 @@ public class DirectionKey extends View {
      * 结束
      */
     private void callBackFinish() {
-        tempDirection = Direction.DIRECTION_CENTER;
+        tempDirection = prevDirection = Direction.DIRECTION_CENTER;
 
         if (null != mOnShakeListener) {
             mOnShakeListener.onFinish();
@@ -273,7 +360,10 @@ public class DirectionKey extends View {
                 float moveX = event.getX();
                 float moveY = event.getY();
                 getRockerPositionPoint(mCenterPoint, new Point((int) moveX, (int) moveY), 75 + 50, 50);
-                invalidate();
+                if (prevDirection == Direction.DIRECTION_CENTER || prevDirection != tempDirection) {
+                    prevDirection = tempDirection;
+                    invalidate();
+                }
                 break;
             case MotionEvent.ACTION_UP:// 抬起
             case MotionEvent.ACTION_CANCEL:// 移出区域
@@ -283,6 +373,7 @@ public class DirectionKey extends View {
                     mOnShakeListener.direction(Direction.DIRECTION_CENTER);
                 }
                 invalidate();
+
                 break;
         }
         return true;
