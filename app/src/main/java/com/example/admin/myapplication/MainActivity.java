@@ -1,35 +1,25 @@
 package com.example.admin.myapplication;
 
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
+import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.util.UUID;
 
 
 
 public class MainActivity extends AppCompatActivity {
 
-    private String address = "1C:5C:F2:73:FC:C2";
-    private UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-    private BluetoothSocket socket;
-    private OutputStream outputStream;
-    private InputStream inputStream;
-    private byte[] data = new byte[34];
-    private Thread threadSocket;
-
-    private TextView textView;
+    private TextView tipe;
     private MediaPlayer leftmediaPlayer;
     private MediaPlayer rightmediaPlayer;
     private MediaPlayer bottommediaPlayer;
@@ -37,47 +27,50 @@ public class MainActivity extends AppCompatActivity {
 
     private ImageButton goUp;
     private ImageButton goDown;
+    private Button bluebooth;
+    private ConstraintLayout constraintLayout;
 
+    private BlueBoothManager blueBoothManager=new BlueBoothManager();
 
 
     private void dealDirection(DirectionKey.Direction direction) {
 
         switch (direction) {
             case DIRECTION_CENTER:
-                textView.setText("中心");
+                tipe.setText("中心");
                 break;
             case DIRECTION_DOWN:
-                textView.setText("下边");
+                tipe.setText("下边");
                 if (!bottommediaPlayer.isPlaying()) {
                     bottommediaPlayer.start();
                 }
                 break;
             case DIRECTION_DOWN_LEFT:
-                textView.setText("左下");
+                tipe.setText("左下");
                 break;
             case DIRECTION_DOWN_RIGHT:
-                textView.setText("右下");
+                tipe.setText("右下");
                 break;
             case DIRECTION_LEFT:
-                textView.setText("左边");
+                tipe.setText("左边");
                 if (!leftmediaPlayer.isPlaying()) {
                     leftmediaPlayer.start();
                 }
                 break;
             case DIRECTION_RIGHT:
-                textView.setText("右边");
+                tipe.setText("右边");
                 if (!rightmediaPlayer.isPlaying()) {
                     rightmediaPlayer.start();
                 }
                 break;
             case DIRECTION_UP_LEFT:
-                textView.setText("左上");
+                tipe.setText("左上");
                 break;
             case DIRECTION_UP_RIGHT:
-                textView.setText("右上");
+                tipe.setText("右上");
                 break;
             case DIRECTION_UP:
-                textView.setText("上面");
+                tipe.setText("上面");
                 if (!topmediaPlayer.isPlaying()) {
                     topmediaPlayer.start();
                 }
@@ -96,8 +89,10 @@ public class MainActivity extends AppCompatActivity {
         rightmediaPlayer = MediaPlayer.create(this, R.raw.you);
         bottommediaPlayer = MediaPlayer.create(this, R.raw.hou);
 
+        bluebooth = findViewById(R.id.bluebooth);
+        tipe = findViewById(R.id.tipe);
+        constraintLayout = findViewById(R.id.activity_main);
 
-        textView = findViewById(R.id.tipe);
         DirectionKey leftdirection = findViewById(R.id.rightDirection);
         leftdirection.setOnShakeListener(new DirectionKey.OnShakeListener() {
             @Override
@@ -116,8 +111,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        goUp=findViewById(R.id.goup);
-        goDown=findViewById(R.id.godown);
+        goUp = findViewById(R.id.goup);
+        goDown = findViewById(R.id.godown);
         goUp.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -125,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
                     case MotionEvent.ACTION_DOWN:// 按下
                     case MotionEvent.ACTION_MOVE:// 移动
                         goUp.setBackground(getResources().getDrawable(R.drawable.left_up2));
+                        blueBoothManager.sendData();
                         break;
                     case MotionEvent.ACTION_UP:// 抬起
                     case MotionEvent.ACTION_CANCEL:// 移出区域
@@ -150,55 +146,60 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
+
+        blueBoothManager.setUpdateInvalidate(new BlueBoothManager.OnUpdateListener() {
+            @Override
+            public void onUpdateInvalidate(int i, String msg) {
+                Message message = new Message();
+                message.what = i;
+                message.obj = msg;
+                handler.sendMessage(message);
+            }
+        });
+
+        if(BlueBooth.state) tipe.setText("当前状态:已连接");
+        else  tipe.setText("当前状态:未连接");
+    }
+
+
+
+    private Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case BlueBooth.CONNECT_BLUEBOOTH:
+                    setTipe((String) msg.obj);
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+
+    public void setTipe(String msg) {
+        tipe.setText(msg);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (socket != null) {
+        if (BlueBooth.socket != null) {
             try {
-                socket.close();
+                BlueBooth.state=false;
+                BlueBooth.socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
-
-    private void sendData() throws IOException {
-        if (outputStream != null) {
-            outputStream.write(data);
-        }
-    }
-
     public void connectBlueTooth(View view) {
-        threadSocket = new Thread(new Connect());
-        threadSocket.start();
+       blueBoothManager.connectBlueTooth();
     }
 
-    private class Connect implements Runnable {
-        @Override
-        public void run() {
-            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-            BluetoothDevice device = adapter.getRemoteDevice(address);
-            if (device == null) {
-                textView.setText("获取失败");
-            }
-            try {
-                socket = (BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[]{int.class}).invoke(device, 1);
-                //socket=device.createRfcommSocketToServiceRecord(uuid);
-                socket.connect();
-                outputStream = socket.getOutputStream();
-                inputStream = socket.getInputStream();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            }
-        }
+    public void backView(View view){
+        Intent intent = new Intent(MainActivity.this, StartUp.class);
+        startActivity(intent);
     }
+
 }
 
