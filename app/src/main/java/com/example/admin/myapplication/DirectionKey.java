@@ -140,8 +140,6 @@ public class DirectionKey extends View {
 
 
     private DEFBitmapClass getBitmap(Direction direction) {
-
-
         Drawable drawable = null;
         switch (direction) {
             case DIRECTION_UP:
@@ -291,11 +289,9 @@ public class DirectionKey extends View {
      *
      * @param centerPoint  中心点
      * @param touchPoint   触摸点
-     * @param regionRadius 摇杆可活动区域半径
-     * @param rockerRadius 摇杆半径
      * @return 摇杆实际显示的位置（点）
      */
-    private Point getRockerPositionPoint(Point centerPoint, Point touchPoint, float regionRadius, float rockerRadius) {
+    private void getRockerPositionPoint(Point centerPoint, Point touchPoint) {
         // 两点在X轴的距离
         float lenX = (float) (touchPoint.x - centerPoint.x);
         // 两点在Y轴距离
@@ -306,19 +302,20 @@ public class DirectionKey extends View {
         double radian = Math.acos(lenX / lenXY) * (touchPoint.y < centerPoint.y ? -1 : 1);
         // 计算角度
         double angle = radian2Angle(radian);
+        callBack(angle, (int) lenXY);
 
-        if (lenXY + rockerRadius <= regionRadius) { // 触摸位置在可活动范围内
-            // 回调 返回参数
-            callBack(angle, (int) lenXY);
-            return touchPoint;
-        } else { // 触摸位置在可活动范围以外
-            // 计算要显示的位置
-            int showPointX = (int) (centerPoint.x + (regionRadius - rockerRadius) * Math.cos(radian));
-            int showPointY = (int) (centerPoint.y + (regionRadius - rockerRadius) * Math.sin(radian));
-
-            callBack(angle, (int) Math.sqrt((showPointX - centerPoint.x) * (showPointX - centerPoint.x) + (showPointY - centerPoint.y) * (showPointY - centerPoint.y)));
-            return new Point(showPointX, showPointY);
-        }
+//        if (lenXY + rockerRadius <= regionRadius) { // 触摸位置在可活动范围内
+//            // 回调 返回参数
+//            callBack(angle, (int) lenXY);
+//            return touchPoint;
+//        } else { // 触摸位置在可活动范围以外
+//            // 计算要显示的位置
+//            int showPointX = (int) (centerPoint.x + (regionRadius - rockerRadius) * Math.cos(radian));
+//            int showPointY = (int) (centerPoint.y + (regionRadius - rockerRadius) * Math.sin(radian));
+//
+//            callBack(angle, (int) Math.sqrt((showPointX - centerPoint.x) * (showPointX - centerPoint.x) + (showPointY - centerPoint.y) * (showPointY - centerPoint.y)));
+//            return new Point(showPointX, showPointY);
+//        }
     }
 
 
@@ -359,10 +356,11 @@ public class DirectionKey extends View {
             case MotionEvent.ACTION_MOVE:// 移动
                 float moveX = event.getX();
                 float moveY = event.getY();
-                getRockerPositionPoint(mCenterPoint, new Point((int) moveX, (int) moveY), 75 + 50, 50);
+                getRockerPositionPoint(mCenterPoint, new Point((int) moveX, (int) moveY));
+                //判断方向是否和上一个方向相同 并且上一个方向不指向中心
                 if (prevDirection == Direction.DIRECTION_CENTER || prevDirection != tempDirection) {
                     prevDirection = tempDirection;
-                    invalidate();
+                    invalidate(); //更新界面
                 }
                 break;
             case MotionEvent.ACTION_UP:// 抬起

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/background"
-    android:id="@+id/activity_main"
+    android:id="@+id/start_up"
     app:layout_constraintBaseline_toBaselineOf="parent"
     tools:context=".MainActivity">
 

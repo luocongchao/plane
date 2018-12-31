@@ -8,7 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 
 /**
  *@ActionName:BlueBoothManager
- *@Descript: //TODO 蓝牙连接发送数据管理
+ *@Descript: //TODO 蓝牙管理器
  *@Author:lcc
  *@Date 2018/12/29  17:27
  *@Params
@@ -76,7 +76,7 @@ public class BlueBoothManager {
         callbackListener=onCallbackListener;
     }
     public interface OnCallbackListener {
-        void onCallback();
+        void onCallback(boolean state);
     }
 
     /**
@@ -89,7 +89,7 @@ public class BlueBoothManager {
      *@Version 1.0.0
      **/
     public void setUpdateInvalidate(OnUpdateListener updateInvalidate) {
-        this.handle = updateInvalidate;
+        handle = updateInvalidate;
     }
 
     public interface OnUpdateListener {
@@ -109,10 +109,12 @@ public class BlueBoothManager {
         @Override
         public void run() {
             BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-            BluetoothDevice device = adapter.getRemoteDevice(BlueBooth.address);
-            if (device == null && handle != null) {
-                handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "连接蓝牙失败");
+            if (adapter == null) {
+                if(handle!=null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "找不到蓝牙设备");
+                if(callbackListener!=null) callbackListener.onCallback(false);
+                return;
             }
+            BluetoothDevice device = adapter.getRemoteDevice(BlueBooth.address);
             try {
                 BlueBooth.socket = (BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[]{int.class}).invoke(device, 1);
                 //socket=device.createRfcommSocketToServiceRecord(uuid);
@@ -120,26 +122,28 @@ public class BlueBoothManager {
                 BlueBooth.socket.connect();
                 BlueBooth.outputStream = BlueBooth.socket.getOutputStream();
                 BlueBooth.inputStream = BlueBooth.socket.getInputStream();
-                if (handle != null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "蓝牙连接成功");
                 BlueBooth.state=true;
+                if (handle != null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "蓝牙连接成功");
+                if(callbackListener!=null) callbackListener.onCallback(true);
             } catch (IOException e) {
-                BlueBooth.state=false;
-                if (handle != null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "连接失败"+e.getMessage());
+                handleDeal(e.getMessage());
                 e.printStackTrace();
             } catch (IllegalAccessException e) {
-                BlueBooth.state=false;
-                if (handle != null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "连接失败"+e.getMessage());
+                handleDeal(e.getMessage());
                 e.printStackTrace();
             } catch (InvocationTargetException e) {
-                BlueBooth.state=false;
-                if (handle != null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "连接失败"+e.getMessage());
+                handleDeal(e.getMessage());
                 e.printStackTrace();
             } catch (NoSuchMethodException e) {
-                BlueBooth.state=false;
-                if (handle != null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "连接失败"+e.getMessage());
+                handleDeal(e.getMessage());
                 e.printStackTrace();
             }
-            if(callbackListener!=null) callbackListener.onCallback();
+
+        }
+        private void handleDeal(String msg){
+            BlueBooth.state=false;
+            if (handle != null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "连接失败"+msg);
+            if (callbackListener!=null) callbackListener.onCallback(false);
         }
     }
 }
