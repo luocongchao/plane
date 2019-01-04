@@ -65,7 +65,9 @@ public class Protocol {
      * @param pitching 俯仰
      */
     public static char[] WriteStatus(char power, char roll, char course, char pitching) {
+
         char[] p = initial_data();
+        p[1] = Command.W_STATUS.v;
         BitData bitData = getHighBitLowBit(power);
         p[3] = bitData.H;
         p[4] = bitData.L;
@@ -206,5 +208,13 @@ public class Protocol {
         p[13] = bitData.H;
         p[14] = bitData.L;
         return p;
+    }
+
+    public static byte[] charToByteArray(char[] chars) {
+        byte[] bytes = new byte[34];
+        for (int i = 0; i < chars.length; i++) {
+            bytes[i] = (byte) chars[i];
+        }
+        return bytes;
     }
 }

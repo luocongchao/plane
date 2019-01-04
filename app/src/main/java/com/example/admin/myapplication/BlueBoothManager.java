@@ -17,8 +17,6 @@ import java.lang.reflect.InvocationTargetException;
  **/
 public class BlueBoothManager {
     private OnUpdateListener handle;
-
-
     /**
      *@ActionName:sendData
      *@Descript: //TODO 蓝牙发送数据
@@ -28,17 +26,12 @@ public class BlueBoothManager {
      *@Return
      *@Version 1.0.0
      **/
-    public void sendData() {
+    public void sendData(byte[] data) {
         if (BlueBooth.outputStream != null) {
-            char[] bt = Protocol.WriteStatus((char) 500, (char) 0, (char) 0, (char) 0);
-            for (int i = 0; i < bt.length; i++) {
-                BlueBooth.data[i] = (byte) bt[i];
-                System.out.println(BlueBooth.data[i] + "  ");
-            }
             try {
-                if(handle!=null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH,"正在发送数据"+BlueBooth.data[0]);
-                BlueBooth.outputStream.write(BlueBooth.data);
-                if(handle!=null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH,"数据发送成功");
+                //if(handle!=null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH,"正在发送数据");
+                BlueBooth.outputStream.write(data);
+                //if(handle!=null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH,"数据发送成功");
             } catch (IOException e) {
                 if(handle!=null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH,"发送失败"+e.getMessage());
                 e.printStackTrace();
@@ -81,7 +74,7 @@ public class BlueBoothManager {
 
     /**
      *@ActionName:setUpdateInvalidate
-     *@Descript: //TODO 设置提示
+     *@Descript: //TODO 设置界面更新对象
      *@Author:lcc
      *@Date 2018/12/29  17:29
      *@Params
@@ -91,7 +84,7 @@ public class BlueBoothManager {
     public void setUpdateInvalidate(OnUpdateListener updateInvalidate) {
         handle = updateInvalidate;
     }
-
+    //界面更新接口
     public interface OnUpdateListener {
         void onUpdateInvalidate(int i, String msg);
     }

@@ -181,7 +181,6 @@ public class DirectionKey extends View {
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
-        Log.d("", "调用draw方法");
         int measuredWidth = getMeasuredWidth();
         int measuredHeight = getMeasuredHeight();
         mCenterPoint = new Point(measuredWidth / 2, measuredHeight / 2);
@@ -242,7 +241,7 @@ public class DirectionKey extends View {
      * @param angle 摇动角度
      */
     private void callBack(double angle, float distance) {
-        Log.d("distance", distance + "");
+        //Log.d("distance", distance + "");
         if (distance < beforeInRadius) {
             tempDirection = Direction.DIRECTION_CENTER;
             return;
@@ -371,7 +370,6 @@ public class DirectionKey extends View {
                     mOnShakeListener.direction(Direction.DIRECTION_CENTER);
                 }
                 invalidate();
-
                 break;
         }
         return true;
