@@ -32,6 +32,7 @@ public class StartUp extends BasicActivity {
         jump.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                vibrator.vibrate(BlueBooth.vibrate);
                 Intent intent = new Intent(StartUp.this, MainActivity.class);
                 startActivity(intent);
             }
@@ -40,6 +41,7 @@ public class StartUp extends BasicActivity {
         connect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                vibrator.vibrate(BlueBooth.vibrate);
                 String address = addresstxt.getText().toString();
                 if (address != null) BlueBooth.address = address;
                 showLoadingDialog("正在连接蓝牙....");

@@ -28,32 +28,37 @@ public class BlueBooth {
     public static final int SETTING_TXT = 2;
     public static boolean state = false;
 
+    //震动时间长度;
+    public static int vibrate=40;
+
     //飞机的数据
     static class plane {
+        //
+        public static int init=1500;
         //油门
         public static int power = 0;
         //航向
-        public static int roll = 1500;
+        public static int roll = init;
         //横滚
-        public static int course = 1500;
+        public static int course = init;
         //俯仰
-        public static int pitching = 1500;
+        public static int pitching = init;
 
 
         //左航向的偏移度
-        public static int left_roll = 1500;
+        public static int left_roll = init;
         //右航向的偏移度
-        public static int right_roll = 1500;
+        public static int right_roll = init;
 
         //左横滚的偏移度
-        public static int left_course = 1500;
+        public static int left_course = init;
         //右横滚的偏移度
-        public static int right_course = 1500;
+        public static int right_course = init;
 
         //左俯仰的偏移度
-        public static int left_pitching = 1500;
+        public static int left_pitching = init;
         //右俯仰的偏移度
-        public static int right_pitching = 1500;
+        public static int right_pitching = init;
 
     }
 

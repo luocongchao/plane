@@ -3,6 +3,7 @@ package com.example.admin.myapplication;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -41,8 +42,8 @@ public class MainActivity extends BasicActivity {
     //设置按钮
     private ImageButton settingBtn;
 
-
-
+    //防止一直触发震动效果
+    private boolean vibratorFlag=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,8 +89,8 @@ public class MainActivity extends BasicActivity {
 
             @Override
             public void onFinish() {
-                BlueBooth.plane.pitching = 1500;
-                BlueBooth.plane.course = 1500;
+                BlueBooth.plane.pitching = BlueBooth.plane.init;
+                BlueBooth.plane.course = BlueBooth.plane.init;
 
             }
         });
@@ -101,21 +102,24 @@ public class MainActivity extends BasicActivity {
             }
         });
 
-
-
         goLeft.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:// 按下
                     case MotionEvent.ACTION_MOVE:// 移动
+                        if(!vibratorFlag){
+                            vibratorFlag=true;
+                            vibrator.vibrate(BlueBooth.vibrate);
+                        }
                         goLeft.setBackground(getResources().getDrawable(R.drawable.roll_left2));
                         BlueBooth.plane.roll = BlueBooth.plane.left_roll;
                         break;
                     case MotionEvent.ACTION_UP:// 抬起
                     case MotionEvent.ACTION_CANCEL:// 移出区域
+                        vibratorFlag=false; //解除震动效果开关
                         goLeft.setBackground(getResources().getDrawable(R.drawable.roll_left));
-                        BlueBooth.plane.roll = 1500;
+                        BlueBooth.plane.roll = BlueBooth.plane.init;
                         break;
                 }
                 return true;
@@ -127,13 +131,18 @@ public class MainActivity extends BasicActivity {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:// 按下
                     case MotionEvent.ACTION_MOVE:// 移动
+                        if(!vibratorFlag){
+                            vibratorFlag=true;
+                            vibrator.vibrate(BlueBooth.vibrate);
+                        }
                         goRight.setBackground(getResources().getDrawable(R.drawable.roll_right2));
                         BlueBooth.plane.roll = BlueBooth.plane.right_roll;
                         break;
                     case MotionEvent.ACTION_UP:// 抬起
                     case MotionEvent.ACTION_CANCEL:// 移出区域
+                        vibratorFlag=false; //解除震动效果开关
                         goRight.setBackground(getResources().getDrawable(R.drawable.roll_right));
-                        BlueBooth.plane.roll = 1500;
+                        BlueBooth.plane.roll = BlueBooth.plane.init;
                         break;
                 }
                 return true;
@@ -142,6 +151,8 @@ public class MainActivity extends BasicActivity {
 
         //实例化一个节流函数对象
         final Throttle throttle = new Throttle();
+        //最快200毫秒调用一次
+        throttle._during=200;
         //设置节流函数的回调函数
         throttle.setOnthrottleListener(new Throttle.onThrottle() {
             @Override
@@ -190,6 +201,7 @@ public class MainActivity extends BasicActivity {
         settingBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                vibrator.vibrate(BlueBooth.vibrate);
                 showSettingDialog();
             }
         });
@@ -217,8 +229,33 @@ public class MainActivity extends BasicActivity {
         }
     }
 
+    //上升按钮
+    public void onRise(View view) {
+        vibrator.vibrate(BlueBooth.vibrate);
+        verticalSeekBar.setProgress(75);
+        BlueBooth.plane.power = 75 * 10;
+        tipe.setText("油门值: " + 75*10);
+    }
+    //悬浮按钮
+    public void onSuspension(View view) {
+        vibrator.vibrate(BlueBooth.vibrate);
+        verticalSeekBar.setProgress(50);
+        BlueBooth.plane.power = 50 * 10;
+        tipe.setText("油门值: " + 50*10);
+    }
+    //下降按钮
+    public void onLand(View view) {
+        vibrator.vibrate(BlueBooth.vibrate);
+        verticalSeekBar.setProgress(25);
+        BlueBooth.plane.power = 25 * 10;
+        tipe.setText("油门值: " + 25*10);
+    }
+
+
+
     //连接蓝牙
     public void connectBlueTooth(View view) {
+        vibrator.vibrate(BlueBooth.vibrate);
         showLoadingDialog("正在连接蓝牙....");
         blueBoothManager.connectBlueTooth(new BlueBoothManager.OnCallbackListener() {
             @Override
@@ -235,6 +272,7 @@ public class MainActivity extends BasicActivity {
     * @Return null
     **/
     public void backView(View view) {
+        vibrator.vibrate(BlueBooth.vibrate);
         Intent intent = new Intent(MainActivity.this, StartUp.class);
         startActivity(intent);
     }
@@ -245,12 +283,12 @@ public class MainActivity extends BasicActivity {
     * @Return null
     **/
     private void dealDirection(DirectionKey.Direction direction) {
-
+        if(direction!=DirectionKey.Direction.DIRECTION_CENTER)  vibrator.vibrate(BlueBooth.vibrate);
         switch (direction) {
             case DIRECTION_CENTER:
                 tipe.setText("中心");
-                BlueBooth.plane.pitching = 1500;
-                BlueBooth.plane.course = 1500;
+                BlueBooth.plane.pitching = BlueBooth.plane.init;
+                BlueBooth.plane.course = BlueBooth.plane.init;
                 break;
 
             case DIRECTION_DOWN:
@@ -259,7 +297,7 @@ public class MainActivity extends BasicActivity {
                     bottommediaPlayer.start();
                 }
                 BlueBooth.plane.pitching = BlueBooth.plane.right_pitching;
-                BlueBooth.plane.course = 1500;
+                BlueBooth.plane.course = BlueBooth.plane.init;
                 break;
             case DIRECTION_UP:
                 tipe.setText("上面");
@@ -267,7 +305,7 @@ public class MainActivity extends BasicActivity {
                     topmediaPlayer.start();
                 }
                 BlueBooth.plane.pitching = BlueBooth.plane.left_pitching;
-                BlueBooth.plane.course = 1500;
+                BlueBooth.plane.course = BlueBooth.plane.init;
                 break;
 
             case DIRECTION_DOWN_LEFT:
@@ -286,7 +324,7 @@ public class MainActivity extends BasicActivity {
                 if (!leftmediaPlayer.isPlaying()) {
                     leftmediaPlayer.start();
                 }
-                BlueBooth.plane.pitching = 1500;
+                BlueBooth.plane.pitching = BlueBooth.plane.init;
                 BlueBooth.plane.course = BlueBooth.plane.left_course;
                 break;
             case DIRECTION_RIGHT:
@@ -294,7 +332,7 @@ public class MainActivity extends BasicActivity {
                 if (!rightmediaPlayer.isPlaying()) {
                     rightmediaPlayer.start();
                 }
-                BlueBooth.plane.pitching = 1500;
+                BlueBooth.plane.pitching = BlueBooth.plane.init;
                 BlueBooth.plane.course = BlueBooth.plane.right_course;
                 break;
             case DIRECTION_UP_LEFT:

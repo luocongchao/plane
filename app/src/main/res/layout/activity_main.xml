@@ -207,13 +207,44 @@
         android:layout_width="60dp"
         android:layout_height="40dp"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/guideline7"
+        app:layout_constraintEnd_toStartOf="@+id/guideline5"
+        app:layout_constraintStart_toStartOf="@+id/guideline4" />
+
+    <Button
+        android:id="@+id/suspension"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:layout_marginTop="8dp"
+        android:onClick="onSuspension"
+        android:background="@drawable/suspension"
         app:layout_constraintEnd_toStartOf="@+id/guideline5"
         app:layout_constraintStart_toStartOf="@+id/guideline4"
         app:layout_constraintTop_toTopOf="@+id/guideline7" />
+
+    <Button
+        android:id="@+id/rise"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:layout_marginEnd="8dp"
+        android:onClick="onRise"
+        android:background="@drawable/rise"
+        app:layout_constraintBottom_toBottomOf="@+id/suspension"
+        app:layout_constraintEnd_toStartOf="@+id/suspension"
+        app:layout_constraintTop_toTopOf="@+id/suspension" />
+
+    <Button
+        android:id="@+id/land"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:layout_marginStart="8dp"
+        android:onClick="onLand"
+        android:background="@drawable/land"
+        app:layout_constraintBottom_toBottomOf="@+id/suspension"
+        app:layout_constraintStart_toEndOf="@+id/suspension"
+        app:layout_constraintTop_toTopOf="@+id/suspension" />
 
 
 </android.support.constraint.ConstraintLayout>

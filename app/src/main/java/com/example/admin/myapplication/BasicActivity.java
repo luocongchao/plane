@@ -6,6 +6,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Vibrator;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -33,6 +34,9 @@ public class BasicActivity extends AppCompatActivity {
 
     //loading对象对话框
     private AlertDialog alertDialog;
+
+    //震动
+    Vibrator vibrator;
 
 
     //蓝牙管理对象
@@ -93,6 +97,8 @@ public class BasicActivity extends AppCompatActivity {
                 handler.sendMessage(getMessage(i, msg));
             }
         });
+        //震动对象
+        vibrator= (Vibrator) getSystemService(VIBRATOR_SERVICE);
     }
 
 
@@ -185,7 +191,7 @@ public class BasicActivity extends AppCompatActivity {
         //开始时间
         Date _prev = new Date();
         //函数调用频率  默认最快100毫秒调用一次
-        int _during = 1000;
+        int _during = 100;
         //定时器
         Timer _timer = new Timer();
         //是否是第一次调用
@@ -295,7 +301,7 @@ public class BasicActivity extends AppCompatActivity {
     private class settingTouch implements Runnable {
         @Override
         public void run() {
-            int sleepnum=100;
+            int sleepnum = 100;
             while (true) {
                 int num = Integer.parseInt(tempTxt.getText().toString());
                 if (add_reduce_state) {
@@ -307,31 +313,31 @@ public class BasicActivity extends AppCompatActivity {
                         num -= 5;
                     }
                 }
-                switch (planeData){
+                switch (planeData) {
                     case left_roll:
-                        BlueBooth.plane.left_roll=num;
+                        BlueBooth.plane.left_roll = num;
                         break;
                     case left_course:
-                        BlueBooth.plane.left_course=num;
+                        BlueBooth.plane.left_course = num;
                         break;
                     case left_pitching:
-                        BlueBooth.plane.left_pitching=num;
+                        BlueBooth.plane.left_pitching = num;
                         break;
                     case right_course:
-                        BlueBooth.plane.right_course=num;
+                        BlueBooth.plane.right_course = num;
                         break;
                     case right_pitching:
-                        BlueBooth.plane.right_pitching=num;
+                        BlueBooth.plane.right_pitching = num;
                         break;
                     case right_roll:
-                        BlueBooth.plane.right_roll=num;
+                        BlueBooth.plane.right_roll = num;
                         break;
                 }
                 handler.sendMessage(getMessage(BlueBooth.SETTING_TXT, String.valueOf(num)));
                 try {
                     Thread.sleep(sleepnum);
-                    if(sleepnum>20){
-                        sleepnum-=5;
+                    if (sleepnum > 20) {
+                        sleepnum -= 5;
                     }
                 } catch (InterruptedException e) {
                     //e.printStackTrace();
@@ -355,6 +361,7 @@ public class BasicActivity extends AppCompatActivity {
                     //threadSetting.interrupt();
                     if (!tempThreadFlag) {
                         tempThreadFlag = true;
+                        vibrator.vibrate(BlueBooth.vibrate); //震动一下
                         threadSetting = new Thread(new settingTouch());
                         threadSetting.start();
                         System.gc();
@@ -377,6 +384,7 @@ public class BasicActivity extends AppCompatActivity {
         settingBackBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                vibrator.vibrate(BlueBooth.vibrate);
                 dismissSettingDialog();
             }
         });
@@ -407,7 +415,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = left_roll_txt;
                 tempMaxValue = 1500;
                 tempMinValue = 0;
-                planeData=BlueBooth.EnumPlaneData.left_roll;
+                planeData = BlueBooth.EnumPlaneData.left_roll;
                 TouchDeal(event, true);
                 return true;
             }
@@ -418,7 +426,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = left_roll_txt;
                 tempMaxValue = 1500;
                 tempMinValue = 0;
-                planeData=BlueBooth.EnumPlaneData.left_roll;
+                planeData = BlueBooth.EnumPlaneData.left_roll;
                 TouchDeal(event, false);
                 return true;
             }
@@ -430,7 +438,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = right_roll_txt;
                 tempMaxValue = 3000;
                 tempMinValue = 1500;
-                planeData=BlueBooth.EnumPlaneData.right_roll;
+                planeData = BlueBooth.EnumPlaneData.right_roll;
                 TouchDeal(event, true);
                 return true;
             }
@@ -441,7 +449,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = right_roll_txt;
                 tempMaxValue = 3000;
                 tempMinValue = 1500;
-                planeData=BlueBooth.EnumPlaneData.right_roll;
+                planeData = BlueBooth.EnumPlaneData.right_roll;
                 TouchDeal(event, false);
                 return true;
             }
@@ -454,7 +462,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = left_course_txt;
                 tempMaxValue = 1500;
                 tempMinValue = 0;
-                planeData=BlueBooth.EnumPlaneData.left_course;
+                planeData = BlueBooth.EnumPlaneData.left_course;
                 TouchDeal(event, true);
                 return true;
             }
@@ -465,7 +473,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = left_course_txt;
                 tempMaxValue = 1500;
                 tempMinValue = 0;
-                planeData=BlueBooth.EnumPlaneData.left_course;
+                planeData = BlueBooth.EnumPlaneData.left_course;
                 TouchDeal(event, false);
                 return true;
             }
@@ -477,7 +485,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = right_course_txt;
                 tempMaxValue = 3000;
                 tempMinValue = 1500;
-                planeData=BlueBooth.EnumPlaneData.right_course;
+                planeData = BlueBooth.EnumPlaneData.right_course;
                 TouchDeal(event, true);
                 return true;
             }
@@ -488,7 +496,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = right_course_txt;
                 tempMaxValue = 3000;
                 tempMinValue = 1500;
-                planeData=BlueBooth.EnumPlaneData.right_course;
+                planeData = BlueBooth.EnumPlaneData.right_course;
                 TouchDeal(event, false);
                 return true;
             }
@@ -501,7 +509,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = left_pitching_txt;
                 tempMaxValue = 1500;
                 tempMinValue = 0;
-                planeData=BlueBooth.EnumPlaneData.left_pitching;
+                planeData = BlueBooth.EnumPlaneData.left_pitching;
                 TouchDeal(event, true);
                 return true;
             }
@@ -512,7 +520,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = left_pitching_txt;
                 tempMaxValue = 1500;
                 tempMinValue = 0;
-                planeData=BlueBooth.EnumPlaneData.left_pitching;
+                planeData = BlueBooth.EnumPlaneData.left_pitching;
                 TouchDeal(event, false);
                 return true;
             }
@@ -524,7 +532,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = right_pitching_txt;
                 tempMaxValue = 3000;
                 tempMinValue = 1500;
-                planeData=BlueBooth.EnumPlaneData.right_pitching;
+                planeData = BlueBooth.EnumPlaneData.right_pitching;
                 TouchDeal(event, true);
                 return true;
             }
@@ -535,7 +543,7 @@ public class BasicActivity extends AppCompatActivity {
                 tempTxt = right_pitching_txt;
                 tempMaxValue = 3000;
                 tempMinValue = 1500;
-                planeData=BlueBooth.EnumPlaneData.right_pitching;
+                planeData = BlueBooth.EnumPlaneData.right_pitching;
                 TouchDeal(event, false);
                 return true;
             }
@@ -545,7 +553,7 @@ public class BasicActivity extends AppCompatActivity {
 
     //弹出setting框
     protected void showSettingDialog() {
-        if(settingDialog==null){
+        if (settingDialog == null) {
             settingDialog = new AlertDialog.Builder(this).create();
             settingDialog.setCancelable(false);
             //dialog点击的监听事件
@@ -557,8 +565,6 @@ public class BasicActivity extends AppCompatActivity {
                     return false;
                 }
             });
-
-
             settingDialog.show();
             settingDialog.setContentView(R.layout.activity_setting);
             settingDialog.setCanceledOnTouchOutside(true);
@@ -569,8 +575,7 @@ public class BasicActivity extends AppCompatActivity {
             settingDialog.getWindow().setLayout(constraintLayout.getWidth(), constraintLayout.getHeight());
 
             initSetting();
-        }
-        else {
+        } else {
             settingDialog.show();
         }
     }
