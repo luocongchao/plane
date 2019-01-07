@@ -113,7 +113,7 @@ public class MainActivity extends BasicActivity {
                             vibrator.vibrate(BlueBooth.vibrate);
                         }
                         goLeft.setBackground(getResources().getDrawable(R.drawable.roll_left2));
-                        BlueBooth.plane.roll = BlueBooth.plane.left_roll;
+                        BlueBooth.plane.roll = BlueBooth.plane.right_roll;
                         break;
                     case MotionEvent.ACTION_UP:// 抬起
                     case MotionEvent.ACTION_CANCEL:// 移出区域
@@ -136,7 +136,7 @@ public class MainActivity extends BasicActivity {
                             vibrator.vibrate(BlueBooth.vibrate);
                         }
                         goRight.setBackground(getResources().getDrawable(R.drawable.roll_right2));
-                        BlueBooth.plane.roll = BlueBooth.plane.right_roll;
+                        BlueBooth.plane.roll = BlueBooth.plane.left_roll;
                         break;
                     case MotionEvent.ACTION_UP:// 抬起
                     case MotionEvent.ACTION_CANCEL:// 移出区域
@@ -296,7 +296,7 @@ public class MainActivity extends BasicActivity {
                 if (!bottommediaPlayer.isPlaying()) {
                     bottommediaPlayer.start();
                 }
-                BlueBooth.plane.pitching = BlueBooth.plane.right_pitching;
+                BlueBooth.plane.pitching = BlueBooth.plane.left_pitching;
                 BlueBooth.plane.course = BlueBooth.plane.init;
                 break;
             case DIRECTION_UP:
@@ -304,19 +304,19 @@ public class MainActivity extends BasicActivity {
                 if (!topmediaPlayer.isPlaying()) {
                     topmediaPlayer.start();
                 }
-                BlueBooth.plane.pitching = BlueBooth.plane.left_pitching;
+                BlueBooth.plane.pitching = BlueBooth.plane.right_pitching;
                 BlueBooth.plane.course = BlueBooth.plane.init;
                 break;
 
             case DIRECTION_DOWN_LEFT:
                 tipe.setText("左下");
-                BlueBooth.plane.pitching = BlueBooth.plane.right_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.left_course;
+                BlueBooth.plane.pitching = BlueBooth.plane.left_pitching;
+                BlueBooth.plane.course = BlueBooth.plane.right_course;
                 break;
             case DIRECTION_DOWN_RIGHT:
                 tipe.setText("右下");
-                BlueBooth.plane.pitching = BlueBooth.plane.right_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.right_course;
+                BlueBooth.plane.pitching = BlueBooth.plane.left_pitching;
+                BlueBooth.plane.course = BlueBooth.plane.left_course;
                 break;
 
             case DIRECTION_LEFT:
@@ -325,7 +325,7 @@ public class MainActivity extends BasicActivity {
                     leftmediaPlayer.start();
                 }
                 BlueBooth.plane.pitching = BlueBooth.plane.init;
-                BlueBooth.plane.course = BlueBooth.plane.left_course;
+                BlueBooth.plane.course = BlueBooth.plane.right_course;
                 break;
             case DIRECTION_RIGHT:
                 tipe.setText("右边");
@@ -333,17 +333,17 @@ public class MainActivity extends BasicActivity {
                     rightmediaPlayer.start();
                 }
                 BlueBooth.plane.pitching = BlueBooth.plane.init;
-                BlueBooth.plane.course = BlueBooth.plane.right_course;
+                BlueBooth.plane.course = BlueBooth.plane.left_course;
                 break;
             case DIRECTION_UP_LEFT:
                 tipe.setText("左上");
-                BlueBooth.plane.pitching = BlueBooth.plane.left_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.left_course;
+                BlueBooth.plane.pitching = BlueBooth.plane.right_pitching;
+                BlueBooth.plane.course = BlueBooth.plane.right_course;
                 break;
             case DIRECTION_UP_RIGHT:
                 tipe.setText("右上");
-                BlueBooth.plane.pitching =  BlueBooth.plane.left_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.right_course;
+                BlueBooth.plane.pitching =  BlueBooth.plane.right_pitching;
+                BlueBooth.plane.course = BlueBooth.plane.left_course;
                 break;
 
         }

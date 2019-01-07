@@ -58,6 +58,7 @@ public class StartUp extends BasicActivity {
                 });
             }
         });
+        addresstxt.setText(BlueBooth.address);
         //判断蓝牙的连接状态
         if (BlueBooth.state) tipe.setText("当前状态:已连接");
         else tipe.setText("当前状态:未连接");

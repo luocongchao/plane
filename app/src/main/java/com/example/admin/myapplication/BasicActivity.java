@@ -173,7 +173,7 @@ public class BasicActivity extends AppCompatActivity {
                 blueBoothManager.sendData(bytes);
                 System.out.println("调用发送数据！！！ 油门：" + BlueBooth.plane.power + " 航向：" + BlueBooth.plane.roll + " 横滚：" + BlueBooth.plane.course + " 俯仰：" + BlueBooth.plane.pitching);
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(500);
                 } catch (InterruptedException e) {
                     //e.printStackTrace();
                     break;
@@ -408,6 +408,12 @@ public class BasicActivity extends AppCompatActivity {
         right_roll_txt = settingDialog.findViewById(R.id.right_roll_txt);
         right_course_txt = settingDialog.findViewById(R.id.right_course_txt);
         right_pitching_txt = settingDialog.findViewById(R.id.right_pitching_txt);
+        left_roll_txt.setText(String.valueOf(BlueBooth.plane.left_roll));
+        left_course_txt.setText(String.valueOf(BlueBooth.plane.left_course));
+        left_pitching_txt.setText(String.valueOf(BlueBooth.plane.left_pitching));
+        right_roll_txt.setText(String.valueOf(BlueBooth.plane.right_roll));
+        right_course_txt.setText(String.valueOf(BlueBooth.plane.right_course));
+        right_pitching_txt.setText(String.valueOf(BlueBooth.plane.right_pitching));
 
         left_roll_add.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -578,6 +584,7 @@ public class BasicActivity extends AppCompatActivity {
         } else {
             settingDialog.show();
         }
+
     }
 
     //隐藏loading框
