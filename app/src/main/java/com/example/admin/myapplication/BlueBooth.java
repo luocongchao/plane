@@ -24,8 +24,7 @@ public class BlueBooth {
     public static InputStream inputStream;
     public static byte[] data = new byte[34];
     public static Thread threadSocket;
-    public static final int CONNECT_BLUEBOOTH = 1;
-    public static final int SETTING_TXT = 2;
+    public static final int COMMON = 1;
     public static boolean state = false;
 
     //震动时间长度;

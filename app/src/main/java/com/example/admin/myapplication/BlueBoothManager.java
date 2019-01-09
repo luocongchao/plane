@@ -3,9 +3,14 @@ package com.example.admin.myapplication;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+
 
 /**
  * @ActionName:BlueBoothManager
@@ -17,7 +22,8 @@ import java.lang.reflect.InvocationTargetException;
  * @Version 1.0.0
  **/
 public class BlueBoothManager {
-    private OnUpdateListener handle;
+
+    private static OnConnectListener connectListener;
 
     /**
      * @ActionName:sendData
@@ -31,18 +37,17 @@ public class BlueBoothManager {
     public void sendData(byte[] data) {
         if (BlueBooth.outputStream != null) {
             try {
-                //if(handle!=null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH,"正在发送数据");
                 BlueBooth.outputStream.write(data);
-                //if(handle!=null) handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH,"数据发送成功");
             } catch (IOException e) {
-                if (handle != null)
-                    handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "发送失败" + e.getMessage());
+                if (connectListener != null) connectListener.onMessage("发送失败" + e.getMessage());
                 e.printStackTrace();
             }
         }
     }
 
-    private OnCallbackListener callbackListener;
+    public void setConnectListener(OnConnectListener listener){
+        connectListener = listener;
+    }
 
     /**
      * @ActionName:connectBlueTooth
@@ -56,45 +61,42 @@ public class BlueBoothManager {
     public void connectBlueTooth() {
         BlueBooth.threadSocket = new Thread(new Connect());
         BlueBooth.threadSocket.start();
-        callbackListener = null;
     }
 
-    /**
-     * @ActionName:connectBlueTooth
-     * @Descript: //TODO 连接蓝牙
-     * @Author:lcc
-     * @Date 2018/12/29  17:28
-     * @Params
-     * @Return
-     * @Version 1.0.0
-     **/
-    public void connectBlueTooth(OnCallbackListener onCallbackListener) {
-        BlueBooth.threadSocket = new Thread(new Connect());
-        BlueBooth.threadSocket.start();
-        callbackListener = onCallbackListener;
-    }
 
-    public interface OnCallbackListener {
+    public interface OnConnectListener {
         void onCallback(boolean state);
+
+        void onStartConnect();
+
+        void onMessage(String msg);
     }
 
-    /**
-     * @ActionName:setUpdateInvalidate
-     * @Descript: //TODO 设置界面更新对象
-     * @Author:lcc
-     * @Date 2018/12/29  17:29
-     * @Params
-     * @Return
-     * @Version 1.0.0
-     **/
-    public void setUpdateInvalidate(OnUpdateListener updateInvalidate) {
-        handle = updateInvalidate;
-    }
+    public BroadcastReceiver stateChangeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (BluetoothDevice.ACTION_ACL_CONNECTED == action) {
+                if (connectListener != null) {
+                    connectListener.onMessage("蓝牙连接成功!");
+                }
+                BlueBooth.state = true;
+            }
+            if (BluetoothDevice.ACTION_ACL_DISCONNECTED == action) {
+                if (connectListener != null) {
+                    connectListener.onMessage("蓝牙连接已断开!");
+                }
+                BlueBooth.state = false;
+            }
+            if (BluetoothAdapter.ACTION_STATE_CHANGED == action) {
+                if (connectListener != null) {
+                    connectListener.onMessage("蓝牙已关闭!");
+                }
+                BlueBooth.state = false;
+            }
+        }
+    };
 
-    //界面更新接口
-    public interface OnUpdateListener {
-        void onUpdateInvalidate(int i, String msg);
-    }
 
     private class Connect implements Runnable {
         /**
@@ -110,24 +112,41 @@ public class BlueBoothManager {
         public void run() {
             BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
             if (adapter == null) {
-                if (handle != null)
-                    handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "找不到蓝牙设备");
-                if (callbackListener != null) callbackListener.onCallback(false);
+                if (connectListener != null) {
+                    connectListener.onMessage("找不到蓝牙设备");
+                    connectListener.onCallback(false);
+                }
                 return;
             }
+            //判断蓝牙是否打开
+            if (!adapter.isEnabled()) {
+                //申请打开蓝牙
+                adapter.enable();
+                int i = 0;
+                //等待蓝牙打开
+                while (!adapter.isEnabled()) {
+                    try {
+                        i++;
+                        Thread.sleep(100);
+                        if (i > 30) break;
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
             BluetoothDevice device = adapter.getRemoteDevice(BlueBooth.address);
             try {
+                if (connectListener != null) connectListener.onStartConnect();
                 BlueBooth.socket = (BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[]{int.class}).invoke(device, 1);
                 //socket=device.createRfcommSocketToServiceRecord(uuid);
-                if (handle != null)
-                    handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "正在连接蓝牙");
+                if (connectListener != null) connectListener.onMessage("正在连接蓝牙");
                 BlueBooth.socket.connect();
                 BlueBooth.outputStream = BlueBooth.socket.getOutputStream();
                 BlueBooth.inputStream = BlueBooth.socket.getInputStream();
                 BlueBooth.state = true;
-                if (handle != null)
-                    handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "蓝牙连接成功");
-                if (callbackListener != null) callbackListener.onCallback(true);
+                if (connectListener != null) connectListener.onCallback(true);
+
             } catch (IOException e) {
                 handleDeal(e.getMessage());
                 e.printStackTrace();
@@ -146,9 +165,12 @@ public class BlueBoothManager {
 
         private void handleDeal(String msg) {
             BlueBooth.state = false;
-            if (handle != null)
-                handle.onUpdateInvalidate(BlueBooth.CONNECT_BLUEBOOTH, "连接失败:" + msg);
-            if (callbackListener != null) callbackListener.onCallback(false);
+            if (connectListener != null) {
+                connectListener.onMessage("连接失败:" + msg);
+                connectListener.onCallback(false);
+            }
         }
     }
+
+
 }

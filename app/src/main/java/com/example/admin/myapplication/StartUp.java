@@ -21,13 +21,7 @@ public class StartUp extends BasicActivity {
 
         tipe = findViewById(R.id.startup_tipe);
         addresstxt = findViewById(R.id.startup_address);
-        //设置消息接收函数
-        setOnMessageCallback(new onMessageCallback() {
-            @Override
-            public void run(String msg) {
-                tipe.setText(msg);
-            }
-        });
+
         //跳转按钮的点击事件
         jump.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -37,6 +31,42 @@ public class StartUp extends BasicActivity {
                 startActivity(intent);
             }
         });
+        blueBoothManager.setConnectListener(new BlueBoothManager.OnConnectListener() {
+            @Override
+            public void onStartConnect() {
+                userHandler(new onHandlerUser() {
+                    @Override
+                    public void run() {
+                        showLoadingDialog("正在连接蓝牙....");
+                    }
+                });
+            }
+
+            @Override
+            public void onMessage(String msg) {
+                userHandler(msg,new onHandlerUser() {
+                    @Override
+                    public void run() {
+                        tipe.setText((String)this.object);
+                    }
+                });
+            }
+
+            @Override
+            public void onCallback(boolean state) {
+                userHandler(new onHandlerUser() {
+                    @Override
+                    public void run() {
+                        dismissLoadingDialog();
+                    }
+                });
+                if (state) {
+                    Intent intent = new Intent(StartUp.this, MainActivity.class);
+                    startActivity(intent);
+                }
+            }
+
+        });
         //连接按钮的点击事件
         connect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -44,18 +74,8 @@ public class StartUp extends BasicActivity {
                 vibrator.vibrate(BlueBooth.vibrate);
                 String address = addresstxt.getText().toString();
                 if (address != null) BlueBooth.address = address;
-                showLoadingDialog("正在连接蓝牙....");
                 //蓝牙连接的异步回调事件
-                blueBoothManager.connectBlueTooth(new BlueBoothManager.OnCallbackListener() {
-                    @Override
-                    public void onCallback(boolean state) {
-                        if (state) {
-                            Intent intent = new Intent(StartUp.this, MainActivity.class);
-                            startActivity(intent);
-                        }
-                        dismissLoadingDialog();
-                    }
-                });
+                blueBoothManager.connectBlueTooth();
             }
         });
         addresstxt.setText(BlueBooth.address);

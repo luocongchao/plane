@@ -56,6 +56,7 @@ public class Protocol {
         return chars;
     }
 
+
     /**
      * 无人机状态控制函数
      *
@@ -80,6 +81,17 @@ public class Protocol {
         bitData = getHighBitLowBit(pitching);
         p[9] = bitData.H;
         p[10] = bitData.L;
+        return p;
+    }
+
+    /**
+     * 无人机状态读取数
+     *
+     */
+    public static char[] ReadStatus() {
+
+        char[] p = initial_data();
+        p[1] = Command.LOOP_RETURN_STATUS.v;
         return p;
     }
 

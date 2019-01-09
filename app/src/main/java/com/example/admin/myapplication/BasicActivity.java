@@ -1,7 +1,9 @@
 package com.example.admin.myapplication;
 
-
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
+import android.content.IntentFilter;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,20 +18,31 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
 
 public class BasicActivity extends AppCompatActivity {
+    private void registerBoradcastReceiver() {
+        IntentFilter stateChangeFilter = new IntentFilter(
+                BluetoothAdapter.ACTION_STATE_CHANGED);
+        IntentFilter connectedFilter = new IntentFilter(
+                BluetoothDevice.ACTION_ACL_CONNECTED);
+        IntentFilter disConnectedFilter = new IntentFilter(
+                BluetoothDevice.ACTION_ACL_DISCONNECTED);
+
+        registerReceiver(blueBoothManager.stateChangeReceiver, stateChangeFilter);
+        registerReceiver(blueBoothManager.stateChangeReceiver, connectedFilter);
+        registerReceiver(blueBoothManager.stateChangeReceiver, disConnectedFilter);
+    }
+
+
+
     //定时任务接口
     protected interface onTimeout {
         void run();
-    }
-
-    //消息回调接口
-    protected interface onMessageCallback {
-        void run(String msg);
     }
 
     //loading对象对话框
@@ -38,67 +51,84 @@ public class BasicActivity extends AppCompatActivity {
     //震动
     Vibrator vibrator;
 
-
     //蓝牙管理对象
     protected BlueBoothManager blueBoothManager = new BlueBoothManager();
-    //消息处理对象
-    protected onMessageCallback messageCallback;
 
     //当前handler对象
     protected static Handler handler;
 
-    //设置消息处理对象
-    protected void setOnMessageCallback(onMessageCallback onMessageCallback) {
-        this.messageCallback = onMessageCallback;
+
+    /**
+    * @ActionName:onHandlerUser
+    * @Descript: //TODO handler运行实体
+    * @Params
+    * @Return
+    **/
+    protected abstract class onHandlerUser {
+        void run() {};
+        Object object;
     }
 
     /**
      * @ActionName:getMessage
-     * @Descript: //TODO 获取一个消息对象
+     * @Descript: //TODO 使用handler运行接口
      * @Params i消息的类型
      * @Params msg消息参数值
      * @Return Message
      **/
-    protected Message getMessage(int i, String msg) {
+    protected void userHandler(onHandlerUser user) {
         Message message = new Message();
-        message.what = i;
-        message.obj = msg;
-        return message;
-
+        message.what = BlueBooth.COMMON;
+        message.obj = user;
+        handler.sendMessage(message);
     }
+    protected void userHandler(Object object,onHandlerUser user) {
+        Message message = new Message();
+        user.object=object;
+        message.what = BlueBooth.COMMON;
+        message.obj = user;
+        handler.sendMessage(message);
+    }
+
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-
+        registerBoradcastReceiver();
         handler = new Handler() {
             //重写当前handler的消息接收处理函数
             @Override
             public void handleMessage(Message msg) {
                 switch (msg.what) {
-                    case BlueBooth.CONNECT_BLUEBOOTH:
+                    case BlueBooth.COMMON:
                         //运行消息处理对象的run函数
-                        if (messageCallback != null) messageCallback.run((String) msg.obj);
-                        break;
-                    case BlueBooth.SETTING_TXT:
-                        //运行消息处理对象的run函数
-                        SETTING_TXT_MessageBack((String) msg.obj);
+                        onHandlerUser kk = (onHandlerUser) msg.obj;
+                        kk.run();
                         break;
                     default:
                         break;
                 }
             }
         };
-        //设置蓝牙管理器的消息通知
-        blueBoothManager.setUpdateInvalidate(new BlueBoothManager.OnUpdateListener() {
-            @Override
-            public void onUpdateInvalidate(int i, String msg) {
-                handler.sendMessage(getMessage(i, msg));
-            }
-        });
+
         //震动对象
-        vibrator= (Vibrator) getSystemService(VIBRATOR_SERVICE);
+        vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+    }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(blueBoothManager.stateChangeReceiver);
+        if (BlueBooth.socket != null) {
+            try {
+                BlueBooth.state = false;
+                BlueBooth.socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 
@@ -170,6 +200,7 @@ public class BasicActivity extends AppCompatActivity {
             while (true) {
                 char[] chars = Protocol.WriteStatus((char) BlueBooth.plane.power, (char) BlueBooth.plane.roll, (char) BlueBooth.plane.course, (char) BlueBooth.plane.pitching);
                 byte[] bytes = Protocol.charToByteArray(chars);
+                if(!BlueBooth.state) break;
                 blueBoothManager.sendData(bytes);
                 System.out.println("调用发送数据！！！ 油门：" + BlueBooth.plane.power + " 航向：" + BlueBooth.plane.roll + " 横滚：" + BlueBooth.plane.course + " 俯仰：" + BlueBooth.plane.pitching);
                 try {
@@ -301,7 +332,7 @@ public class BasicActivity extends AppCompatActivity {
     private class settingTouch implements Runnable {
         @Override
         public void run() {
-            int sleepnum = 100;
+            int sleepnum = 200;
             while (true) {
                 int num = Integer.parseInt(tempTxt.getText().toString());
                 if (add_reduce_state) {
@@ -333,11 +364,17 @@ public class BasicActivity extends AppCompatActivity {
                         BlueBooth.plane.right_roll = num;
                         break;
                 }
-                handler.sendMessage(getMessage(BlueBooth.SETTING_TXT, String.valueOf(num)));
+                userHandler(String.valueOf(num), new onHandlerUser() {
+                    @Override
+                    void run() {
+                        tempTxt.setText((String)this.object);
+                    }
+                });
+                //handler.sendMessage(getMessage(BlueBooth.SETTING_TXT, String.valueOf(num)));
                 try {
                     Thread.sleep(sleepnum);
-                    if (sleepnum > 20) {
-                        sleepnum -= 5;
+                    if (sleepnum >= 20) {
+                        sleepnum -= 10;
                     }
                 } catch (InterruptedException e) {
                     //e.printStackTrace();
@@ -347,10 +384,6 @@ public class BasicActivity extends AppCompatActivity {
         }
     }
 
-    //SETTING_TXT消息类型的回调函数
-    private void SETTING_TXT_MessageBack(String txt) {
-        tempTxt.setText(txt);
-    }
 
     private void TouchDeal(MotionEvent event, boolean add_reduce) {
         add_reduce_state = add_reduce;
@@ -574,9 +607,11 @@ public class BasicActivity extends AppCompatActivity {
             settingDialog.show();
             settingDialog.setContentView(R.layout.activity_setting);
             settingDialog.setCanceledOnTouchOutside(true);
-            settingDialog.getWindow().setBackgroundDrawableResource(R.color.colorBlue);
+            settingDialog.getWindow().setBackgroundDrawable(new ColorDrawable());
+//            settingDialog.getWindow().setBackgroundDrawableResource(R.color.colorBlue);
             //获取主界面的宽高
             ConstraintLayout constraintLayout = findViewById(R.id.activity_main);
+            settingDialog.getWindow().setUiOptions(120);
             //设置对话框的宽高和主界面的宽高一样(满屏)
             settingDialog.getWindow().setLayout(constraintLayout.getWidth(), constraintLayout.getHeight());
 

@@ -72,8 +72,41 @@ public class MainActivity extends BasicActivity {
     }
 
 
+
+    BlueBoothManager.OnConnectListener blueconnectlisten=new BlueBoothManager.OnConnectListener() {
+        @Override
+        public void onStartConnect() {
+            userHandler(new onHandlerUser() {
+                @Override
+                void run() {
+                    showLoadingDialog("正在连接蓝牙....");
+                }
+            });
+        }
+
+        @Override
+        public void onMessage(String msg) {
+            userHandler(msg, new onHandlerUser() {
+                @Override
+                void run() {
+                    tipe.setText((String)this.object);
+                }
+            });
+        }
+
+        @Override
+        public void onCallback(boolean state) {
+            userHandler(new onHandlerUser() {
+                @Override
+                void run() {
+                    dismissLoadingDialog();
+                }
+            });
+        }
+    };
     //定义监听回调
     private void initListener() {
+        blueBoothManager.setConnectListener(blueconnectlisten);
 
         //设置方向摇杆的监听事件
         rightdirection.setOnShakeListener(new DirectionKey.OnShakeListener() {
@@ -94,13 +127,6 @@ public class MainActivity extends BasicActivity {
 
             }
         });
-        //设置消息接收函数
-        setOnMessageCallback(new onMessageCallback() {
-            @Override
-            public void run(String msg) {
-                tipe.setText(msg);
-            }
-        });
 
         goLeft.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -111,6 +137,10 @@ public class MainActivity extends BasicActivity {
                         if(!vibratorFlag){
                             vibratorFlag=true;
                             vibrator.vibrate(BlueBooth.vibrate);
+                            tipe.setText("左边");
+                            if (!leftmediaPlayer.isPlaying()) {
+                                leftmediaPlayer.start();
+                            }
                         }
                         goLeft.setBackground(getResources().getDrawable(R.drawable.roll_left2));
                         BlueBooth.plane.roll = BlueBooth.plane.right_roll;
@@ -134,6 +164,10 @@ public class MainActivity extends BasicActivity {
                         if(!vibratorFlag){
                             vibratorFlag=true;
                             vibrator.vibrate(BlueBooth.vibrate);
+                            tipe.setText("右边");
+                            if (!rightmediaPlayer.isPlaying()) {
+                                rightmediaPlayer.start();
+                            }
                         }
                         goRight.setBackground(getResources().getDrawable(R.drawable.roll_right2));
                         BlueBooth.plane.roll = BlueBooth.plane.left_roll;
@@ -158,7 +192,12 @@ public class MainActivity extends BasicActivity {
             @Override
             public void run(int[] args) {
                 //发送信息到handler对象 通知handler更新界面
-                handler.sendMessage(getMessage(BlueBooth.CONNECT_BLUEBOOTH, "油门值: " + String.valueOf(args[0])));
+                userHandler("油门值: " + String.valueOf(args[0]), new onHandlerUser() {
+                    @Override
+                    void run() {
+                       tipe.setText((String)this.object);
+                    }
+                });
             }
         });
         verticalSeekBar.setOnSeekBarChangeListener(new VerticalSeekBar.OnSeekBarChangeListener() {
@@ -216,18 +255,6 @@ public class MainActivity extends BasicActivity {
     }
 
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (BlueBooth.socket != null) {
-            try {
-                BlueBooth.state = false;
-                BlueBooth.socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     //上升按钮
     public void onRise(View view) {
@@ -252,17 +279,10 @@ public class MainActivity extends BasicActivity {
     }
 
 
-
     //连接蓝牙
     public void connectBlueTooth(View view) {
         vibrator.vibrate(BlueBooth.vibrate);
-        showLoadingDialog("正在连接蓝牙....");
-        blueBoothManager.connectBlueTooth(new BlueBoothManager.OnCallbackListener() {
-            @Override
-            public void onCallback(boolean state) {
-                dismissLoadingDialog();
-            }
-        });
+        blueBoothManager.connectBlueTooth();
     }
 
     /**
@@ -273,6 +293,8 @@ public class MainActivity extends BasicActivity {
     **/
     public void backView(View view) {
         vibrator.vibrate(BlueBooth.vibrate);
+        //关闭发送数据的线程
+        threadPlane.interrupt();
         Intent intent = new Intent(MainActivity.this, StartUp.class);
         startActivity(intent);
     }
@@ -320,18 +342,12 @@ public class MainActivity extends BasicActivity {
                 break;
 
             case DIRECTION_LEFT:
-                tipe.setText("左边");
-                if (!leftmediaPlayer.isPlaying()) {
-                    leftmediaPlayer.start();
-                }
+
                 BlueBooth.plane.pitching = BlueBooth.plane.init;
                 BlueBooth.plane.course = BlueBooth.plane.right_course;
                 break;
             case DIRECTION_RIGHT:
-                tipe.setText("右边");
-                if (!rightmediaPlayer.isPlaying()) {
-                    rightmediaPlayer.start();
-                }
+
                 BlueBooth.plane.pitching = BlueBooth.plane.init;
                 BlueBooth.plane.course = BlueBooth.plane.left_course;
                 break;
