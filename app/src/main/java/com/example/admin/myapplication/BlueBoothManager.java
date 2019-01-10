@@ -68,10 +68,10 @@ public class BlueBoothManager {
         void onCallback(boolean state);
 
         void onStartConnect();
-
         void onMessage(String msg);
     }
 
+    public static BasicActivity.onHandlerUser bahandler;
     public BroadcastReceiver stateChangeReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -81,18 +81,27 @@ public class BlueBoothManager {
                     connectListener.onMessage("蓝牙连接成功!");
                 }
                 BlueBooth.state = true;
+                if(bahandler!=null){
+                    bahandler.run();
+                }
             }
             if (BluetoothDevice.ACTION_ACL_DISCONNECTED == action) {
                 if (connectListener != null) {
                     connectListener.onMessage("蓝牙连接已断开!");
                 }
                 BlueBooth.state = false;
+                if(bahandler!=null){
+                    bahandler.run();
+                }
             }
             if (BluetoothAdapter.ACTION_STATE_CHANGED == action) {
                 if (connectListener != null) {
                     connectListener.onMessage("蓝牙已关闭!");
                 }
                 BlueBooth.state = false;
+                if(bahandler!=null){
+                    bahandler.run();
+                }
             }
         }
     };

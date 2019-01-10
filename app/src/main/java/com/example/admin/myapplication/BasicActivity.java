@@ -2,6 +2,7 @@ package com.example.admin.myapplication;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.IntentFilter;
 import android.graphics.drawable.ColorDrawable;
@@ -39,7 +40,6 @@ public class BasicActivity extends AppCompatActivity {
     }
 
 
-
     //定时任务接口
     protected interface onTimeout {
         void run();
@@ -55,17 +55,20 @@ public class BasicActivity extends AppCompatActivity {
     protected BlueBoothManager blueBoothManager = new BlueBoothManager();
 
     //当前handler对象
-    protected static Handler handler;
+    static Handler handler;
 
 
     /**
-    * @ActionName:onHandlerUser
-    * @Descript: //TODO handler运行实体
-    * @Params
-    * @Return
-    **/
-    protected abstract class onHandlerUser {
-        void run() {};
+     * @ActionName:onHandlerUser
+     * @Descript: //TODO handler运行实体
+     * @Params
+     * @Return
+     **/
+    public static abstract class onHandlerUser {
+        void run() {
+        }
+
+        ;
         Object object;
     }
 
@@ -76,27 +79,28 @@ public class BasicActivity extends AppCompatActivity {
      * @Params msg消息参数值
      * @Return Message
      **/
-    protected void userHandler(onHandlerUser user) {
+    public static void userHandler(onHandlerUser user) {
         Message message = new Message();
         message.what = BlueBooth.COMMON;
         message.obj = user;
         handler.sendMessage(message);
     }
-    protected void userHandler(Object object,onHandlerUser user) {
+
+    public static void userHandler(Object object, onHandlerUser user) {
         Message message = new Message();
-        user.object=object;
+        user.object = object;
         message.what = BlueBooth.COMMON;
         message.obj = user;
         handler.sendMessage(message);
     }
 
-
-
+    private Context mContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
+        mContext = this;
         registerBoradcastReceiver();
         handler = new Handler() {
             //重写当前handler的消息接收处理函数
@@ -113,10 +117,22 @@ public class BasicActivity extends AppCompatActivity {
                 }
             }
         };
-
+        BlueBooth.plane.init_r = Integer.valueOf((String) SPUtils.get(mContext, "roll", "1500"));
+        BlueBooth.plane.init_c = Integer.valueOf((String) SPUtils.get(mContext, "course", "1500"));
+        BlueBooth.plane.init_p = Integer.valueOf((String) SPUtils.get(mContext, "pitching", "1500"));
+        BlueBooth.plane.setRoll(BlueBooth.plane.init_r);
+        BlueBooth.plane.setCourse(BlueBooth.plane.init_c);
+        BlueBooth.plane.setPitching(BlueBooth.plane.init_p);
+        BlueBooth.plane.left_course = BlueBooth.plane.init_c - 200;
+        BlueBooth.plane.right_course = BlueBooth.plane.init_c + 200;
+        BlueBooth.plane.left_pitching = BlueBooth.plane.init_p - 200;
+        BlueBooth.plane.right_pitching = BlueBooth.plane.init_p + 200;
+        BlueBooth.plane.left_roll = BlueBooth.plane.init_r - 200;
+        BlueBooth.plane.right_roll = BlueBooth.plane.init_r + 200;
         //震动对象
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
     }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -191,25 +207,69 @@ public class BasicActivity extends AppCompatActivity {
     }
 
     //定时发送数据线程对象
-    public Thread threadPlane = new Thread(new WritePlane());
+    public WritePlane threadPlane = new WritePlane();
+    public onHandlerUser readCall;
 
-    //定时发送数据线程
-    public class WritePlane implements Runnable {
+    private class ReadPlane extends Thread {
+        private boolean flag = true;
+
+        public void setState(boolean flag) {
+            this.flag = flag;
+        }
+
         @Override
         public void run() {
-            while (true) {
+            char[] chars = Protocol.ReadStatus();
+            byte[] bytes = Protocol.charToByteArray(chars);
+            if (BlueBooth.state) blueBoothManager.sendData(bytes);
+            while (this.flag && BlueBooth.state) {
+                byte[] readbyte = new byte[34];
+                try {
+                    BlueBooth.inputStream.read(readbyte, 0, 34);
+                    int power = ProtocolUtil.mergeHighBitLowBit((char) readbyte[27], (char) readbyte[28]);// readbyte[27]<<=8 | readbyte[28];
+                    //System.out.println("返回值 油门: " + power);
+                    int roll = ProtocolUtil.mergeHighBitLowBit((char) readbyte[25], (char) readbyte[26]);
+                    int course = ProtocolUtil.mergeHighBitLowBit((char) readbyte[15], (char) readbyte[16]);
+                    int pitching = ProtocolUtil.mergeHighBitLowBit((char) readbyte[17], (char) readbyte[18]);
+                    System.out.println("返回值 油门: " + power + " 航向:" + roll + " 横滚:" + course + " 俯仰:" + pitching);
+                    int[] ints = new int[]{power, roll, course, pitching};
+
+//                    userHandler(ints, readCall);
+                } catch (IOException e) {
+                    //e.printStackTrace();
+                    break;
+                }
+
+            }
+        }
+    }
+
+    //定时发送数据线程
+    public class WritePlane extends Thread {
+
+        private boolean flag = true;
+
+        public void setState(boolean flag) {
+            this.flag = flag;
+        }
+
+        @Override
+        public void run() {
+            ReadPlane readPlane = new ReadPlane();
+            readPlane.start();
+            while (this.flag && BlueBooth.state) {
                 char[] chars = Protocol.WriteStatus((char) BlueBooth.plane.power, (char) BlueBooth.plane.roll, (char) BlueBooth.plane.course, (char) BlueBooth.plane.pitching);
                 byte[] bytes = Protocol.charToByteArray(chars);
-                if(!BlueBooth.state) break;
                 blueBoothManager.sendData(bytes);
                 System.out.println("调用发送数据！！！ 油门：" + BlueBooth.plane.power + " 航向：" + BlueBooth.plane.roll + " 横滚：" + BlueBooth.plane.course + " 俯仰：" + BlueBooth.plane.pitching);
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {
-                    //e.printStackTrace();
+                    e.printStackTrace();
                     break;
                 }
             }
+            readPlane.setState(false);
         }
     }
 
@@ -303,6 +363,7 @@ public class BasicActivity extends AppCompatActivity {
     private Button right_pitching_add;
     //设置关闭按钮
     private Button right_pitching_reduce;
+    private Button saveBtn;
 
     //设置关闭按钮
     private TextView left_roll_txt;
@@ -316,6 +377,27 @@ public class BasicActivity extends AppCompatActivity {
     private TextView right_course_txt;
     //设置关闭按钮
     private TextView right_pitching_txt;
+
+
+    //设置关闭按钮
+    private Button pitching_reduce;
+    //设置关闭按钮
+    private Button pitching_add;
+    //设置关闭按钮
+    private Button roll_add;
+    //设置关闭按钮
+    private Button roll_reduce;
+
+    private Button course_add;
+    //设置关闭按钮
+    private Button course_reduce;
+
+    //设置关闭按钮
+    private TextView roll_txt;
+    //设置关闭按钮
+    private TextView course_txt;
+    //设置关闭按钮
+    private TextView pitching_txt;
 
     //临时需改变的文本框
     private TextView tempTxt;
@@ -337,11 +419,11 @@ public class BasicActivity extends AppCompatActivity {
                 int num = Integer.parseInt(tempTxt.getText().toString());
                 if (add_reduce_state) {
                     if (num < tempMaxValue) {
-                        num += 5;
+                        num += 1;
                     }
                 } else {
                     if (num > tempMinValue) {
-                        num -= 5;
+                        num -= 1;
                     }
                 }
                 switch (planeData) {
@@ -367,7 +449,7 @@ public class BasicActivity extends AppCompatActivity {
                 userHandler(String.valueOf(num), new onHandlerUser() {
                     @Override
                     void run() {
-                        tempTxt.setText((String)this.object);
+                        tempTxt.setText((String) this.object);
                     }
                 });
                 //handler.sendMessage(getMessage(BlueBooth.SETTING_TXT, String.valueOf(num)));
@@ -421,6 +503,25 @@ public class BasicActivity extends AppCompatActivity {
                 dismissSettingDialog();
             }
         });
+        saveBtn = settingDialog.findViewById(R.id.setting_save);
+        //设置界面的返回按钮
+        saveBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                vibrator.vibrate(BlueBooth.vibrate);
+                SPUtils.put(mContext, "roll", roll_txt.getText().toString());
+                SPUtils.put(mContext, "pitching", pitching_txt.getText().toString());
+                SPUtils.put(mContext, "course", course_txt.getText().toString());
+
+                BlueBooth.plane.init_c = Integer.valueOf(course_txt.getText().toString());
+                BlueBooth.plane.init_r = Integer.valueOf(roll_txt.getText().toString());
+                BlueBooth.plane.init_p = Integer.valueOf(pitching_txt.getText().toString());
+                BlueBooth.plane.setRoll(BlueBooth.plane.init_r);
+                BlueBooth.plane.setCourse(BlueBooth.plane.init_c);
+                BlueBooth.plane.setPitching(BlueBooth.plane.init_p);
+                dismissSettingDialog();
+            }
+        });
         left_roll_add = settingDialog.findViewById(R.id.left_roll_add);
         left_roll_reduce = settingDialog.findViewById(R.id.left_roll_reduce);
         left_course_add = settingDialog.findViewById(R.id.left_course_add);
@@ -441,12 +542,29 @@ public class BasicActivity extends AppCompatActivity {
         right_roll_txt = settingDialog.findViewById(R.id.right_roll_txt);
         right_course_txt = settingDialog.findViewById(R.id.right_course_txt);
         right_pitching_txt = settingDialog.findViewById(R.id.right_pitching_txt);
+
         left_roll_txt.setText(String.valueOf(BlueBooth.plane.left_roll));
         left_course_txt.setText(String.valueOf(BlueBooth.plane.left_course));
         left_pitching_txt.setText(String.valueOf(BlueBooth.plane.left_pitching));
         right_roll_txt.setText(String.valueOf(BlueBooth.plane.right_roll));
         right_course_txt.setText(String.valueOf(BlueBooth.plane.right_course));
         right_pitching_txt.setText(String.valueOf(BlueBooth.plane.right_pitching));
+
+
+        pitching_add = settingDialog.findViewById(R.id.pitching_add);
+        pitching_reduce = settingDialog.findViewById(R.id.pitching_reduce);
+        roll_add = settingDialog.findViewById(R.id.roll_add);
+        roll_reduce = settingDialog.findViewById(R.id.roll_reduce);
+        course_add = settingDialog.findViewById(R.id.course_add);
+        course_reduce = settingDialog.findViewById(R.id.course_reduce);
+
+        roll_txt = settingDialog.findViewById(R.id.roll_txt);
+        course_txt = settingDialog.findViewById(R.id.course_txt);
+        pitching_txt = settingDialog.findViewById(R.id.pitching_txt);
+
+        roll_txt.setText(String.valueOf(BlueBooth.plane.init_r));
+        course_txt.setText(String.valueOf(BlueBooth.plane.init_c));
+        pitching_txt.setText(String.valueOf(BlueBooth.plane.init_p));
 
         left_roll_add.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -583,6 +701,77 @@ public class BasicActivity extends AppCompatActivity {
                 tempMaxValue = 3000;
                 tempMinValue = 1500;
                 planeData = BlueBooth.EnumPlaneData.right_pitching;
+                TouchDeal(event, false);
+                return true;
+            }
+        });
+
+        ///--
+        course_add.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                tempTxt = course_txt;
+                tempMaxValue = 3000;
+                tempMinValue = 0;
+                planeData = BlueBooth.EnumPlaneData.course;
+                TouchDeal(event, true);
+                return true;
+            }
+        });
+        course_reduce.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                tempTxt = course_txt;
+                tempMaxValue = 3000;
+                tempMinValue = 0;
+                planeData = BlueBooth.EnumPlaneData.course;
+                TouchDeal(event, false);
+                return true;
+            }
+        });
+
+
+        roll_add.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                tempTxt = roll_txt;
+                tempMaxValue = 3000;
+                tempMinValue = 0;
+                planeData = BlueBooth.EnumPlaneData.roll;
+                TouchDeal(event, true);
+                return true;
+            }
+        });
+        roll_reduce.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                tempTxt = roll_txt;
+                tempMaxValue = 3000;
+                tempMinValue = 0;
+                planeData = BlueBooth.EnumPlaneData.roll;
+                TouchDeal(event, false);
+                return true;
+            }
+        });
+
+        pitching_add.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                tempTxt = pitching_txt;
+                tempMaxValue = 3000;
+                tempMinValue = 0;
+                planeData = BlueBooth.EnumPlaneData.pitching;
+                TouchDeal(event, true);
+                return true;
+            }
+        });
+        pitching_reduce.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                tempTxt = pitching_txt;
+                tempMaxValue = 3000;
+                tempMinValue = 0;
+                planeData = BlueBooth.EnumPlaneData.pitching;
                 TouchDeal(event, false);
                 return true;
             }

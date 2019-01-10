@@ -43,7 +43,15 @@ public class MainActivity extends BasicActivity {
     private ImageButton settingBtn;
 
     //防止一直触发震动效果
-    private boolean vibratorFlag=false;
+    private boolean vibratorFlag = false;
+
+    private TextView maintxtroll;
+    private TextView maintxtcourse;
+    private TextView maintxtpower;
+    private TextView maintxtpitching;
+
+    private Button rise;
+    private Button land;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,16 +72,21 @@ public class MainActivity extends BasicActivity {
         goRight = findViewById(R.id.goright);
         verticalSeekBar = findViewById(R.id.verticalSeekBar);
         aSwitch = findViewById(R.id.switch1);
-        settingBtn=findViewById(R.id.main_setting);
+        settingBtn = findViewById(R.id.main_setting);
 
+        maintxtcourse = findViewById(R.id.main_txtcourse);
+        maintxtpitching = findViewById(R.id.main_txtpitching);
+        maintxtpower = findViewById(R.id.main_txtpower);
+        maintxtroll = findViewById(R.id.main_txtroll);
 
+        rise = findViewById(R.id.rise);
+        land = findViewById(R.id.land);
         initView();
         initListener();
     }
 
 
-
-    BlueBoothManager.OnConnectListener blueconnectlisten=new BlueBoothManager.OnConnectListener() {
+    BlueBoothManager.OnConnectListener blueconnectlisten = new BlueBoothManager.OnConnectListener() {
         @Override
         public void onStartConnect() {
             userHandler(new onHandlerUser() {
@@ -89,7 +102,7 @@ public class MainActivity extends BasicActivity {
             userHandler(msg, new onHandlerUser() {
                 @Override
                 void run() {
-                    tipe.setText((String)this.object);
+                    tipe.setText((String) this.object);
                 }
             });
         }
@@ -104,8 +117,87 @@ public class MainActivity extends BasicActivity {
             });
         }
     };
+
+
+    private boolean isVibratorFlag = false;
+
+
     //定义监听回调
     private void initListener() {
+
+        blueBoothManager.bahandler=new onHandlerUser() {
+            @Override
+            void run() {
+                if(BlueBooth.state){
+                   bluebooth.setBackgroundDrawable(getDrawable(R.drawable.light));
+                }else {
+                    bluebooth.setBackgroundDrawable(getDrawable(R.drawable.grey));
+                }
+            }
+        };
+        BlueBooth.setOnHandlerUser(new onHandlerUser() {
+            @Override
+            void run() {
+                int[] ints = (int[]) this.object;
+                maintxtpower.setText("油门:" + ints[0]);
+                maintxtroll.setText("航向:" + ints[1]);
+                maintxtcourse.setText("横滚:" + ints[2]);
+                maintxtpitching.setText("俯仰:" + ints[3]);
+            }
+        });
+
+        rise.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:// 按下
+                    case MotionEvent.ACTION_MOVE:// 移动
+                        if (!isVibratorFlag) {
+                            vibrator.vibrate(BlueBooth.vibrate);
+                            isVibratorFlag = true;
+                            if (BlueBooth.plane.power >= 999) {
+                                BlueBooth.plane.setPower(1000);
+                            } else {
+                                BlueBooth.plane.setPower(BlueBooth.plane.power + 1);
+                            }
+                            verticalSeekBar.setProgress(BlueBooth.plane.power / 10);
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:// 抬起
+                    case MotionEvent.ACTION_CANCEL:// 移出区域
+                        isVibratorFlag = false;
+                        break;
+                }
+                return true;
+            }
+        });
+        land.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:// 按下
+                    case MotionEvent.ACTION_MOVE:// 移动
+                        if (!isVibratorFlag) {
+                            vibrator.vibrate(BlueBooth.vibrate);
+                            isVibratorFlag = true;
+                            if (BlueBooth.plane.power <= 1) {
+                                BlueBooth.plane.setPower(0);
+
+                            } else {
+                                BlueBooth.plane.setPower(BlueBooth.plane.power -1);
+                            }
+                            verticalSeekBar.setProgress(BlueBooth.plane.power / 10);
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:// 抬起
+                    case MotionEvent.ACTION_CANCEL:// 移出区域
+                        isVibratorFlag = false;
+                        break;
+                }
+                return true;
+            }
+        });
+
         blueBoothManager.setConnectListener(blueconnectlisten);
 
         //设置方向摇杆的监听事件
@@ -122,8 +214,8 @@ public class MainActivity extends BasicActivity {
 
             @Override
             public void onFinish() {
-                BlueBooth.plane.pitching = BlueBooth.plane.init;
-                BlueBooth.plane.course = BlueBooth.plane.init;
+                BlueBooth.plane.pitching = BlueBooth.plane.init_p;
+                BlueBooth.plane.course = BlueBooth.plane.init_c;
 
             }
         });
@@ -134,22 +226,21 @@ public class MainActivity extends BasicActivity {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:// 按下
                     case MotionEvent.ACTION_MOVE:// 移动
-                        if(!vibratorFlag){
-                            vibratorFlag=true;
+                        if (!vibratorFlag) {
+                            vibratorFlag = true;
                             vibrator.vibrate(BlueBooth.vibrate);
-                            tipe.setText("左边");
                             if (!leftmediaPlayer.isPlaying()) {
                                 leftmediaPlayer.start();
                             }
                         }
                         goLeft.setBackground(getResources().getDrawable(R.drawable.roll_left2));
-                        BlueBooth.plane.roll = BlueBooth.plane.right_roll;
+                        BlueBooth.plane.setRoll(BlueBooth.plane.right_roll);
                         break;
                     case MotionEvent.ACTION_UP:// 抬起
                     case MotionEvent.ACTION_CANCEL:// 移出区域
-                        vibratorFlag=false; //解除震动效果开关
+                        vibratorFlag = false; //解除震动效果开关
                         goLeft.setBackground(getResources().getDrawable(R.drawable.roll_left));
-                        BlueBooth.plane.roll = BlueBooth.plane.init;
+                        BlueBooth.plane.setRoll(BlueBooth.plane.init_r);
                         break;
                 }
                 return true;
@@ -161,52 +252,56 @@ public class MainActivity extends BasicActivity {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:// 按下
                     case MotionEvent.ACTION_MOVE:// 移动
-                        if(!vibratorFlag){
-                            vibratorFlag=true;
+                        if (!vibratorFlag) {
+                            vibratorFlag = true;
                             vibrator.vibrate(BlueBooth.vibrate);
-                            tipe.setText("右边");
                             if (!rightmediaPlayer.isPlaying()) {
                                 rightmediaPlayer.start();
                             }
                         }
                         goRight.setBackground(getResources().getDrawable(R.drawable.roll_right2));
-                        BlueBooth.plane.roll = BlueBooth.plane.left_roll;
+                        BlueBooth.plane.setRoll(BlueBooth.plane.left_roll);
                         break;
                     case MotionEvent.ACTION_UP:// 抬起
                     case MotionEvent.ACTION_CANCEL:// 移出区域
-                        vibratorFlag=false; //解除震动效果开关
+                        vibratorFlag = false; //解除震动效果开关
                         goRight.setBackground(getResources().getDrawable(R.drawable.roll_right));
-                        BlueBooth.plane.roll = BlueBooth.plane.init;
+                        BlueBooth.plane.setRoll(BlueBooth.plane.init_r);
                         break;
                 }
                 return true;
             }
         });
 
-        //实例化一个节流函数对象
-        final Throttle throttle = new Throttle();
-        //最快200毫秒调用一次
-        throttle._during=200;
-        //设置节流函数的回调函数
-        throttle.setOnthrottleListener(new Throttle.onThrottle() {
-            @Override
-            public void run(int[] args) {
-                //发送信息到handler对象 通知handler更新界面
-                userHandler("油门值: " + String.valueOf(args[0]), new onHandlerUser() {
-                    @Override
-                    void run() {
-                       tipe.setText((String)this.object);
-                    }
-                });
-            }
-        });
+//        //实例化一个节流函数对象
+//        final Throttle throttle = new Throttle();
+//        //最快200毫秒调用一次
+//        throttle._during = 200;
+//        //设置节流函数的回调函数
+//        throttle.setOnthrottleListener(new Throttle.onThrottle() {
+//            @Override
+//            public void run(int[] args) {
+//                //发送信息到handler对象 通知handler更新界面
+//                userHandler("油门值: " + String.valueOf(args[0]), new onHandlerUser() {
+//                    @Override
+//                    void run() {
+//                        tipe.setText((String) this.object);
+//                    }
+//                });
+//            }
+//        });
+
+
         verticalSeekBar.setOnSeekBarChangeListener(new VerticalSeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(VerticalSeekBar VerticalBar, int progress, boolean fromUser) {
 
-                BlueBooth.plane.power = progress * 10;
+                if (!isVibratorFlag) {
+                    BlueBooth.plane.setPower(progress * 10);
+                    isVibratorFlag = false;
+                }
                 //调用节流函数更新界面的通知栏(防止调用频率太高导致界面卡死)
-                startThrottle(throttle, new int[]{progress * 10});
+                //startThrottle(throttle, new int[]{progress * 10});
             }
 
             @Override
@@ -224,14 +319,17 @@ public class MainActivity extends BasicActivity {
         aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                BlueBooth.plane.setPower(0);
+                verticalSeekBar.setProgress(0);
                 if (isChecked) {
                     //开启发送数据的线程
-                    threadPlane=new Thread(new WritePlane());
+                    threadPlane = new WritePlane();
                     threadPlane.start();
                     System.gc();
                 } else {
                     //关闭发送数据的线程
-                    threadPlane.interrupt();
+                    threadPlane.setState(false);
+
                 }
             }
         });
@@ -250,32 +348,38 @@ public class MainActivity extends BasicActivity {
 
     //初始化界面
     private void initView() {
+        maintxtroll.setText("航向:" + String.valueOf(BlueBooth.plane.init_r));
+        maintxtpitching.setText("俯仰:" + String.valueOf(BlueBooth.plane.init_p));
+        maintxtcourse.setText("横滚:" + String.valueOf(BlueBooth.plane.init_c));
         if (BlueBooth.state) tipe.setText("当前状态:已连接");
         else tipe.setText("当前状态:未连接");
-    }
 
+        if(BlueBooth.state) bluebooth.setBackgroundDrawable(getResources().getDrawable(R.drawable.light));
+    }
 
 
     //上升按钮
     public void onRise(View view) {
         vibrator.vibrate(BlueBooth.vibrate);
-        verticalSeekBar.setProgress(75);
-        BlueBooth.plane.power = 75 * 10;
-        tipe.setText("油门值: " + 75*10);
+        isVibratorFlag = true;
+        BlueBooth.plane.setPower(BlueBooth.plane.getPower() + 5);
+        verticalSeekBar.setProgress(BlueBooth.plane.power / 10);
     }
+
+
     //悬浮按钮
     public void onSuspension(View view) {
         vibrator.vibrate(BlueBooth.vibrate);
         verticalSeekBar.setProgress(50);
-        BlueBooth.plane.power = 50 * 10;
-        tipe.setText("油门值: " + 50*10);
+        BlueBooth.plane.setPower(50 * 10);
     }
+
     //下降按钮
     public void onLand(View view) {
         vibrator.vibrate(BlueBooth.vibrate);
-        verticalSeekBar.setProgress(25);
-        BlueBooth.plane.power = 25 * 10;
-        tipe.setText("油门值: " + 25*10);
+        isVibratorFlag = true;
+        BlueBooth.plane.setPower(BlueBooth.plane.getPower() - 5);
+        verticalSeekBar.setProgress(BlueBooth.plane.power / 10);
     }
 
 
@@ -285,81 +389,84 @@ public class MainActivity extends BasicActivity {
         blueBoothManager.connectBlueTooth();
     }
 
+
     /**
-    * @ActionName:backView
-    * @Descript: //TODO 返回开始界面
-    * @Params View
-    * @Return null
-    **/
+     * @ActionName:backView
+     * @Descript: //TODO 返回开始界面
+     * @Params View
+     * @Return null
+     **/
     public void backView(View view) {
         vibrator.vibrate(BlueBooth.vibrate);
         //关闭发送数据的线程
-        threadPlane.interrupt();
+        threadPlane.setState(false);
         Intent intent = new Intent(MainActivity.this, StartUp.class);
         startActivity(intent);
     }
+
     /**
-    * @ActionName:dealDirection
-    * @Descript: //TODO 方向摇杆的处理函数
-    * @Params DirectionKey.Dire
-    * @Return null
-    **/
+     * @ActionName:dealDirection
+     * @Descript: //TODO 方向摇杆的处理函数
+     * @Params DirectionKey.Dire
+     * @Return null
+     **/
     private void dealDirection(DirectionKey.Direction direction) {
-        if(direction!=DirectionKey.Direction.DIRECTION_CENTER)  vibrator.vibrate(BlueBooth.vibrate);
+        if (direction != DirectionKey.Direction.DIRECTION_CENTER)
+            vibrator.vibrate(BlueBooth.vibrate);
         switch (direction) {
             case DIRECTION_CENTER:
                 tipe.setText("中心");
-                BlueBooth.plane.pitching = BlueBooth.plane.init;
-                BlueBooth.plane.course = BlueBooth.plane.init;
+                BlueBooth.plane.setPitching(BlueBooth.plane.init_p);
+                BlueBooth.plane.setCourse(BlueBooth.plane.init_c);
                 break;
 
             case DIRECTION_DOWN:
-                tipe.setText("下边");
+//                tipe.setText("下边");
                 if (!bottommediaPlayer.isPlaying()) {
                     bottommediaPlayer.start();
                 }
-                BlueBooth.plane.pitching = BlueBooth.plane.left_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.init;
+                BlueBooth.plane.setPitching(BlueBooth.plane.left_pitching);
+                BlueBooth.plane.setCourse(BlueBooth.plane.init_c);
                 break;
             case DIRECTION_UP:
-                tipe.setText("上面");
+//                tipe.setText("上面");
                 if (!topmediaPlayer.isPlaying()) {
                     topmediaPlayer.start();
                 }
-                BlueBooth.plane.pitching = BlueBooth.plane.right_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.init;
+                BlueBooth.plane.setPitching(BlueBooth.plane.right_pitching);
+                BlueBooth.plane.setCourse(BlueBooth.plane.init_c);
                 break;
 
             case DIRECTION_DOWN_LEFT:
-                tipe.setText("左下");
-                BlueBooth.plane.pitching = BlueBooth.plane.left_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.right_course;
+//                tipe.setText("左下");
+                BlueBooth.plane.setPitching(BlueBooth.plane.left_pitching);
+                BlueBooth.plane.setCourse(BlueBooth.plane.right_course);
                 break;
             case DIRECTION_DOWN_RIGHT:
-                tipe.setText("右下");
-                BlueBooth.plane.pitching = BlueBooth.plane.left_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.left_course;
+//                tipe.setText("右下");
+                BlueBooth.plane.setPitching(BlueBooth.plane.left_pitching);
+                BlueBooth.plane.setCourse(BlueBooth.plane.left_course);
                 break;
 
             case DIRECTION_LEFT:
 
-                BlueBooth.plane.pitching = BlueBooth.plane.init;
-                BlueBooth.plane.course = BlueBooth.plane.right_course;
+                BlueBooth.plane.setPitching(BlueBooth.plane.init_p);
+                BlueBooth.plane.setCourse(BlueBooth.plane.right_course);
                 break;
             case DIRECTION_RIGHT:
 
-                BlueBooth.plane.pitching = BlueBooth.plane.init;
-                BlueBooth.plane.course = BlueBooth.plane.left_course;
+                BlueBooth.plane.setPitching(BlueBooth.plane.init_p);
+                BlueBooth.plane.setCourse(BlueBooth.plane.left_course);
                 break;
             case DIRECTION_UP_LEFT:
-                tipe.setText("左上");
-                BlueBooth.plane.pitching = BlueBooth.plane.right_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.right_course;
+//                tipe.setText("左上");
+                BlueBooth.plane.setPitching(BlueBooth.plane.right_pitching);
+                BlueBooth.plane.setCourse(BlueBooth.plane.right_course);
                 break;
             case DIRECTION_UP_RIGHT:
-                tipe.setText("右上");
-                BlueBooth.plane.pitching =  BlueBooth.plane.right_pitching;
-                BlueBooth.plane.course = BlueBooth.plane.left_course;
+//                tipe.setText("右上");
+                BlueBooth.plane.setPitching(BlueBooth.plane.right_pitching);
+                BlueBooth.plane.setCourse(BlueBooth.plane.left_course);
                 break;
 
         }
